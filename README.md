@@ -10,6 +10,8 @@
 
 Tap to record. Choose the rooms. Tap to send. HomeCall Card gives Home Assistant a responsive microphone interface with a waveform, recording timer, recipient picker, and clear delivery feedback. It requires the separate [HomeCall integration](https://github.com/thomasgregg/homecall).
 
+**Currently, HomeCall supports Alexa/Echo speakers only.** I’m happy to expand support to other speakers and welcome ideas and contributions. [Open an issue](https://github.com/thomasgregg/homecall/issues) to discuss a speaker platform you’d like to help support.
+
 ## Features
 
 - **Record and send:** mono audio capture with a 60-second limit.
