@@ -7,10 +7,10 @@
   "license": "MIT",
   "scripts": {
     "build": "node scripts/build.mjs",
-    "format": "prettier --write src scripts tests playwright.config.js *.json *.md docs .github",
-    "format:check": "prettier --check src scripts tests playwright.config.js *.json *.md docs .github",
+    "format": "prettier --write src scripts tests *.json *.md docs .github",
+    "format:check": "prettier --check src scripts tests *.json *.md docs .github",
     "test": "node --test tests/*.test.cjs tests/*.test.js",
-    "test:browser": "playwright test",
+    "test:browser": "playwright test --config scripts/playwright.config.js",
     "check": "npm run format:check && npm run build && npm test && npm run test:browser"
   },
   "devDependencies": {

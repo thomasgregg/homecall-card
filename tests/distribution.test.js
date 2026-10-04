@@ -4,6 +4,10 @@ import { readFile, readdir, access } from "node:fs/promises";
 import vm from "node:vm";
 
 test("single-file distribution registers both canonical custom elements", async () => {
+  assert.deepEqual(
+    (await readdir(".")).filter((name) => name.endsWith(".js")),
+    ["homecall-card.js"],
+  );
   const names = [];
   const source = await readFile("homecall-card.js", "utf8");
   vm.runInNewContext(source, {
