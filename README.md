@@ -12,6 +12,15 @@ Tap to record. Choose the rooms. Tap to send. HomeCall Card gives Home Assistant
 
 **Currently, HomeCall supports Alexa/Echo speakers only.** I’m happy to expand support to other speakers and welcome ideas and contributions. [Open an issue](https://github.com/thomasgregg/homecall/issues) to discuss a speaker platform you’d like to help support.
 
+## Contents
+
+- [Features](#features)
+- [Install](#install)
+- [Everyday use](#everyday-use)
+- [Configuration](#configuration)
+- [Documentation](#documentation)
+- [Development](#development)
+
 ## Features
 
 - **Record and send:** mono audio capture with a 60-second limit.
