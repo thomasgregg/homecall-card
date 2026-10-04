@@ -1,0 +1,16 @@
+import { build } from "esbuild";
+import { readFile } from "node:fs/promises";
+const { version } = JSON.parse(
+  await readFile(new URL("../package.json", import.meta.url)),
+);
+await build({
+  entryPoints: ["src/homecall-card.js"],
+  outfile: "homecall-card.js",
+  bundle: true,
+  format: "iife",
+  target: "es2022",
+  minify: false,
+  banner: {
+    js: `/*! HomeCall Card v${version} | MIT License | github.com/thomasgregg/homecall-card */`,
+  },
+});
