@@ -28,6 +28,10 @@ First install and configure the [HomeCall integration](https://github.com/thomas
 
 ### HACS
 
+[![Open in HACS](https://my.home-assistant.io/badges/hacs_repository.svg)](https://my.home-assistant.io/redirect/hacs_repository/?owner=thomasgregg&repository=homecall-card&category=plugin)
+
+With HACS installed, click the button to open this custom repository in your Home Assistant instance. Add it when prompted, then choose **Download**. Install the integration and card separately.
+
 1. Add `https://github.com/thomasgregg/homecall-card` to HACS **Custom repositories** as a **Dashboard** repository.
 2. Download HomeCall Card.
 3. Confirm HACS registered the JavaScript resource, refresh the dashboard, and add **HomeCall** from the card picker.
