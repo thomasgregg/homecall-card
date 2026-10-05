@@ -1,5 +1,11 @@
 # Changelog
 
+## 1.0.4
+
+- Match speaker-picker, discard and status icon control boundaries and corner radii.
+- Keep narrow controls at 32px and other compact controls at 44px without changing the main action size.
+- Add browser checks for equal control width, height and radius.
+
 ## 1.0.3
 
 - Restore the accepted 97px centered action on narrow dashboards with the speaker picker hidden.

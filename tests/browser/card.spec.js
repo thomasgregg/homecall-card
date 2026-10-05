@@ -277,3 +277,36 @@ test("an offline DLNA speaker recovers when HA reports idle", async ({
     await page.locator("homecall-card").evaluate((c) => c._selection),
   ).toEqual(["media_player.jbl"]);
 });
+
+for (const width of [177.5, 246]) {
+  test(`icon control boundaries match at ${width}px`, async ({ page }) => {
+    await fixture(page, width, 184);
+    await page.locator("#toggle").click();
+    const sizes = await page.locator("homecall-card").evaluate((c) => {
+      const measure = (selector) => {
+        const el = c.shadowRoot.querySelector(selector);
+        const base = el.shadowRoot?.querySelector("button") || el;
+        const r = base.getBoundingClientRect();
+        return {
+          width: r.width,
+          height: r.height,
+          radius: getComputedStyle(base).borderRadius,
+        };
+      };
+      const picker = measure("summary");
+      c._phase = "recorded";
+      c._syncPhase();
+      const discard = measure(".discard");
+      c._phase = "error";
+      c._syncPhase();
+      const status = measure(".status-more");
+      return { picker, discard, status };
+    });
+    const expected = width < 200 ? 32 : 44;
+    for (const control of Object.values(sizes)) {
+      expect(control.width).toBe(expected);
+      expect(control.height).toBe(expected);
+      expect(control.radius).toBe(sizes.picker.radius);
+    }
+  });
+}

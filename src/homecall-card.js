@@ -165,7 +165,7 @@ class HomeCallCard extends HTMLElement {
   _render() {
     if (!this.config || !this._hass || !this.isConnected) return;
     this.shadowRoot.innerHTML = `<style>
-:host{display:block;height:100%;min-width:0;font-family:var(--primary-font-family,Roboto,sans-serif);--homecall-button-size:112px;--homecall-icon-size:63px;--homecall-padding:20px;--homecall-selector-top:10px;--homecall-content-inset:13px;--homecall-control-radius:var(--ha-border-radius-md)}
+:host{display:block;height:100%;min-width:0;font-family:var(--primary-font-family,Roboto,sans-serif);--homecall-button-size:112px;--homecall-icon-size:63px;--homecall-padding:20px;--homecall-selector-top:10px;--homecall-content-inset:13px;--homecall-control-size:44px;--homecall-control-radius:var(--ha-border-radius-md)}
 ha-card{display:flex;position:relative;flex-direction:column;box-sizing:border-box;height:100%;min-height:184px;min-width:0;padding:var(--homecall-padding);color:var(--primary-text-color);--homecall-tone:var(--ha-color-fill-primary-loud-resting,var(--primary-color))}
 ha-card[data-tone="red"]{--homecall-tone:var(--ha-color-fill-danger-loud-resting,var(--error-color))}[hidden]{display:none!important}.header{display:flex;align-items:center;justify-content:space-between;gap:12px;min-height:44px;position:absolute;top:var(--homecall-selector-top);inset-inline:var(--homecall-padding);z-index:2;pointer-events:none}
 .targets{margin:0 0 0 auto;max-width:100%;flex:none;pointer-events:auto;color:var(--secondary-text-color);font-size:var(--ha-font-size-m)}.targets summary{display:flex;align-items:center;justify-content:flex-end;gap:4px;cursor:pointer;list-style:none;min-height:44px;min-width:44px;max-width:100%;border-radius:var(--homecall-control-radius);padding-inline:6px;margin-inline-end:calc(var(--homecall-content-inset) - 6px);-webkit-tap-highlight-color:transparent}.targets summary span{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.targets summary::-webkit-details-marker{display:none}.targets summary:focus-visible{outline:2px solid var(--ha-color-focus);outline-offset:2px}.targets summary ha-icon{--mdc-icon-size:18px;flex:none}.targets .speaker-icon{display:none}.targets[open] .chevron{transform:rotate(180deg)}.targets summary[aria-disabled="true"]{color:var(--disabled-text-color);cursor:default}
@@ -177,8 +177,12 @@ ha-card[data-narrow="true"] .info{height:32px;min-height:32px;align-items:flex-e
 .info{display:flex;position:absolute;bottom:var(--homecall-padding);inset-inline:var(--homecall-padding);pointer-events:none;align-items:center;justify-content:space-between;gap:8px;height:44px;min-height:44px;flex:none;color:var(--secondary-text-color);font-size:var(--ha-font-size-m);line-height:20px}.discard{pointer-events:auto;--ha-button-height:44px;--ha-button-border-radius:var(--homecall-control-radius);--ha-button-box-shadow:none;flex:none}.discard::part(base){padding:0 12px;min-width:44px}.discard::part(label){display:flex;align-items:center;gap:8px;font-size:var(--ha-font-size-m);font-weight:400;line-height:20px}.discard ha-icon{--mdc-icon-size:20px}.message-control{display:flex;align-items:center;justify-content:center;min-width:0;gap:4px}.status{line-height:20px;overflow:hidden;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow-wrap:anywhere}.status-more{pointer-events:auto;flex:none;color:var(--secondary-text-color)}ha-card[data-phase="error"] .status-more{color:var(--error-color)}ha-card[data-phase="sent"] .status-more{color:var(--success-color)}.time{display:flex;align-items:center;gap:8px;margin-inline-start:auto;padding-inline-end:var(--homecall-content-inset);white-space:nowrap;font-variant-numeric:tabular-nums}.recording .time:before{content:'';display:block;width:8px;height:8px;flex:none;border-radius:50%;background:var(--ha-color-fill-danger-loud-resting,var(--error-color))}
 .sr-only{position:absolute!important;width:1px!important;height:1px!important;padding:0!important;margin:-1px!important;overflow:hidden!important;clip:rect(0,0,0,0)!important;white-space:nowrap!important;border:0!important}
 ha-card[data-compact="true"] .targets summary{justify-content:center;margin-inline-end:calc(var(--homecall-content-inset) - 11px);padding-inline:0}ha-card[data-compact="true"] .targets summary span,ha-card[data-compact="true"] .targets .chevron{display:none}ha-card[data-compact="true"] .targets .speaker-icon{display:block;--mdc-icon-size:22px}ha-card[data-compact="true"] .discard .discard-label{display:none}ha-card[data-compact="true"] .message-control{gap:0}
+ha-card[data-narrow="true"]{--homecall-control-size:32px}
+ha-card[data-compact="true"] .targets summary{box-sizing:border-box;width:var(--homecall-control-size);height:var(--homecall-control-size);min-width:var(--homecall-control-size);min-height:var(--homecall-control-size)}
+ha-card[data-compact="true"] .discard::part(base),.status-more::part(base){box-sizing:border-box;width:var(--homecall-control-size);min-width:var(--homecall-control-size);padding:0}
+.status-more{--ha-button-height:var(--homecall-control-size);--ha-button-border-radius:var(--homecall-control-radius);--ha-button-box-shadow:none}.status-more ha-icon{--mdc-icon-size:20px}
 @media(hover:hover){.targets summary:hover{background:var(--ha-color-fill-neutral-quiet-hover)}}
-</style><ha-card><div class="header"><details class="targets"><summary><ha-icon class="speaker-icon" icon="mdi:volume-high"></ha-icon><span></span><ha-icon class="chevron" icon="mdi:chevron-down"></ha-icon></summary></details></div><div class="list" popover="auto"></div><div class="status-popover" popover="auto"></div><div class="action"><div class="visual"><canvas class="wave" aria-label="${this._t("Mikrofonpegel")}"></canvas><div class="halo" aria-hidden="true"></div><ha-button class="main" appearance="accent" variant="brand" disabled></ha-button></div></div><div class="info"><div class="action-label"></div><ha-button class="discard" appearance="plain" variant="neutral" hidden><ha-icon icon="mdi:delete-outline"></ha-icon><span class="discard-label">${this._t("Verwerfen")}</span></ha-button><div class="message-control"><ha-icon-button class="status-more" hidden></ha-icon-button><div class="status" role="status" aria-live="polite"></div></div><div class="time" hidden>00:00</div></div></ha-card>`;
+</style><ha-card><div class="header"><details class="targets"><summary><ha-icon class="speaker-icon" icon="mdi:volume-high"></ha-icon><span></span><ha-icon class="chevron" icon="mdi:chevron-down"></ha-icon></summary></details></div><div class="list" popover="auto"></div><div class="status-popover" popover="auto"></div><div class="action"><div class="visual"><canvas class="wave" aria-label="${this._t("Mikrofonpegel")}"></canvas><div class="halo" aria-hidden="true"></div><ha-button class="main" appearance="accent" variant="brand" disabled></ha-button></div></div><div class="info"><div class="action-label"></div><ha-button class="discard" appearance="plain" variant="neutral" hidden><ha-icon icon="mdi:delete-outline"></ha-icon><span class="discard-label">${this._t("Verwerfen")}</span></ha-button><div class="message-control"><ha-button class="status-more" appearance="plain" variant="neutral" hidden></ha-button><div class="status" role="status" aria-live="polite"></div></div><div class="time" hidden>00:00</div></div></ha-card>`;
     this._view = this.shadowRoot.querySelector("ha-card");
     const discard = this._view.querySelector(".discard");
     discard.setAttribute("aria-label", this._t("Aufnahme verwerfen"));
@@ -367,15 +371,7 @@ ha-card[data-compact="true"] .targets summary{justify-content:center;margin-inli
       this._phase === "ready" && this._selection?.length === 0;
     icon.hidden =
       recording || starting || (this._phase === "ready" && !noSelection);
-    if (this._phase === "sent")
-      icon.path =
-        "M12,2A10,10 0 1,0 22,12A10,10 0 0,0 12,2M10,17L5,12L6.41,10.59L10,14.17L17.59,6.58L19,8L10,17Z";
-    else if (this._phase === "error" || noSelection)
-      icon.path =
-        "M11,15H13V17H11V15M11,7H13V13H11V7M12,2A10,10 0 1,0 22,12A10,10 0 0,0 12,2M12,4A8,8 0 1,1 4,12A8,8 0 0,1 12,4Z";
-    else
-      icon.path =
-        "M12,2A10,10 0 1,0 22,12A10,10 0 0,0 12,2M12,4A8,8 0 1,1 4,12A8,8 0 0,1 12,4M11,6V13L16.2,16.2L17,14.9L12.5,12.2V6H11Z";
+    icon.innerHTML = `<ha-icon icon="mdi:${this._phase === "sent" ? "check-circle-outline" : this._phase === "error" || noSelection ? "alert-circle-outline" : "clock-outline"}"></ha-icon>`;
   }
   _showStatus() {
     const popover = this._view.querySelector(".status-popover");
@@ -772,6 +768,7 @@ ha-card[data-compact="true"] .targets summary{justify-content:center;margin-inli
       this._view.querySelector(".status").textContent = text;
       const icon = this._view.querySelector(".status-more");
       icon.label = text;
+      icon.setAttribute("aria-label", text);
       icon.title = text;
       this._syncPhase();
     }
