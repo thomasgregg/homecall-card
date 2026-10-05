@@ -1,5 +1,10 @@
 # Changelog
 
+## 1.1.3
+
+- Fix the README banner in HACS by using an absolute public image URL.
+- Documentation-only change; recording and integration behavior are unchanged.
+
 ## 1.1.2
 
 - Show only the central checkmark after sending successfully, removing the duplicate status checkmark.
