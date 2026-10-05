@@ -1,10 +1,12 @@
 # Changelog
 
-## 1.0.2
+## 1.0.3
 
 - Restore the accepted 97px centered action on narrow dashboards with the speaker picker hidden.
 - Keep timer and delete controls inside the card with at least 8px halo clearance.
 - Verify exact sizing after picker toggles and frontend rerenders in Chromium and WebKit.
+
+Version 1.0.2 was not released: packaging validation caught an outdated bundle version header.
 
 - Use speaker-neutral labels for Alexa and DLNA recipients.
 - Recover from unavailable DLNA speakers when HA reports them online.

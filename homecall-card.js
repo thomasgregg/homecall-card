@@ -1,4 +1,4 @@
-/*! HomeCall Card v1.0.1 | MIT License | github.com/thomasgregg/homecall-card */
+/*! HomeCall Card v1.0.3 | MIT License | github.com/thomasgregg/homecall-card */
 (() => {
   // src/layout.js
   function homeCallLayout(width, height, hasSelector = true, selectorWidth = 100, footerWidths = null) {
