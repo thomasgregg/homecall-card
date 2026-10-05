@@ -101,6 +101,25 @@ class HomeCallCard extends HTMLElement {
     this._lang = lang;
     if (changed) this._close();
     if (changed || !this._view) this._render();
+    else if (
+      this._phase === "error" &&
+      this._availabilityError &&
+      this._availabilitySnapshot !== this._availabilityState()
+    )
+      this._retryAvailability();
+  }
+  _availabilityState() {
+    // Notify states can be timestamps or "unknown"; neither means offline.
+    return JSON.stringify(
+      Object.entries(this._hass?.states || {})
+        .filter(([id]) => id.startsWith("notify.") && id.endsWith("_speak"))
+        .map(([id, state]) => [id, state.state !== "unavailable"])
+        .sort(([a], [b]) => a.localeCompare(b)),
+    );
+  }
+  _retryAvailability() {
+    this._nextSelection = this._selection?.length ? [...this._selection] : null;
+    this._load();
   }
   _t(text, values = {}) {
     let result = this._lang === "de" ? text : HOMECALL_EN[text] || text;
@@ -205,6 +224,12 @@ ha-card[data-compact="true"] .targets summary{justify-content:center;margin-inli
     this._visibility = () => {
       if (document.hidden && ["starting", "recording"].includes(this._phase))
         this._reset();
+      else if (
+        !document.hidden &&
+        this._phase === "error" &&
+        this._availabilityError
+      )
+        this._retryAvailability();
     };
     document.addEventListener("visibilitychange", this._visibility);
     this._dismissTargets = (event) => {
@@ -371,6 +396,7 @@ ha-card[data-compact="true"] .targets summary{justify-content:center;margin-inli
       ) + "px";
   }
   async _load() {
+    this._availabilityError = false;
     const session = Symbol();
     this._session = session;
     this._chunks = [];
@@ -418,6 +444,9 @@ ha-card[data-compact="true"] .targets summary{justify-content:center;margin-inli
         error.message === "Kein Echo ist gerade erreichbar."
           ? error.message
           : "Geräte konnten nicht geladen werden.";
+      this._availabilityError =
+        error.message === "Kein Echo ist gerade erreichbar.";
+      this._availabilitySnapshot = this._availabilityState();
       const summary = this._view.querySelector("summary");
       summary.querySelector("span").textContent = this._t(
         "Kein Echo ausgewählt",
@@ -446,11 +475,11 @@ ha-card[data-compact="true"] .targets summary{justify-content:center;margin-inli
     this._view.classList.remove("recording");
     this._view.querySelector(".time").textContent = "00:00";
     if (
+      this._availabilityError ||
       !this._view.querySelector(".echo-form") ||
       !this._targets?.some((t) => t.available)
     ) {
-      this._nextSelection = this._selection ? [...this._selection] : null;
-      this._load();
+      this._retryAvailability();
       return;
     }
     this._phase = "ready";

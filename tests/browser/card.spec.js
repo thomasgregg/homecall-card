@@ -4,7 +4,7 @@ const script = await readFile(
   new URL("../../homecall-card.js", import.meta.url),
   "utf8",
 );
-async function fixture(page, width = 215, height = 184) {
+async function fixture(page, width = 215, height = 184, liveStatus = false) {
   await page.setContent(
     `<style>body{--primary-color:#009ac0;--primary-text-color:#222;--secondary-text-color:#666;--ha-font-size-m:14px;--ha-border-radius-md:8px;--ha-border-radius-lg:12px;font-family:Arial}homecall-card{display:block;width:${width}px;height:${height}px}</style><button id="toggle">Toggle picker and save</button><main></main>`,
   );
@@ -41,14 +41,36 @@ async function fixture(page, width = 215, height = 184) {
     customElements.define("ha-form", class extends HTMLElement {});
   });
   await page.addScriptTag({ content: script });
-  await page.evaluate(() => {
+  await page.evaluate((liveStatus) => {
     const c = document.createElement("homecall-card");
-    c._load = function () {
-      this._phase = "ready";
-      this._selection = ["notify.kitchen_speak"];
-      this._button("Aufnehmen");
-    };
+    if (!liveStatus)
+      c._load = function () {
+        this._phase = "ready";
+        this._selection = ["notify.kitchen_speak"];
+        this._button("Aufnehmen");
+      };
     c._hass = { locale: { language: "en" } };
+    if (liveStatus) {
+      window.statusRequests = 0;
+      window.echoOnline = false;
+      c._hass.states = { "notify.kitchen_speak": { state: "unavailable" } };
+      c._hass.fetchWithAuth = async () => {
+        window.statusRequests++;
+        return {
+          ok: true,
+          json: async () => ({
+            default_targets: [],
+            targets: [
+              {
+                entity_id: "notify.kitchen_speak",
+                name: "Kitchen",
+                available: window.echoOnline,
+              },
+            ],
+          }),
+        };
+      };
+    }
     c._lang = "en";
     c.config = { show_speaker_selection: false };
     document.querySelector("main").append(c);
@@ -56,9 +78,74 @@ async function fixture(page, width = 215, height = 184) {
       c.setConfig({
         show_speaker_selection: c.config.show_speaker_selection === false,
       });
-  });
+  }, liveStatus);
   await expect(page.locator("homecall-card .main")).toBeVisible();
 }
+test("an offline Echo recovers from HA updates without a dashboard reload", async ({
+  page,
+}) => {
+  await fixture(page, 246, 184, true);
+  await expect(page.locator("homecall-card .main")).toHaveAttribute(
+    "aria-label",
+    "Retry",
+  );
+  const original = await geometry(page);
+  await page.locator("homecall-card").evaluate((c) => {
+    c.hass = {
+      ...c._hass,
+      states: { ...c._hass.states, "sensor.other": { state: "on" } },
+    };
+  });
+  expect(await page.evaluate(() => window.statusRequests)).toBe(1);
+  await page.locator("homecall-card").evaluate((c) => {
+    window.echoOnline = true;
+    c.hass = {
+      ...c._hass,
+      states: {
+        ...c._hass.states,
+        "notify.kitchen_speak": { state: "unknown" },
+      },
+    };
+  });
+  await expect(page.locator("homecall-card .main")).toHaveAttribute(
+    "aria-label",
+    "Record",
+  );
+  expect(await page.evaluate(() => window.statusRequests)).toBe(2);
+  expect((await geometry(page)).size).toBe(original.size);
+});
+test("Retry fetches current availability and keeps recovered recipients selected", async ({
+  page,
+}) => {
+  await fixture(page, 246, 184, true);
+  await expect(page.locator("homecall-card .main")).toHaveAttribute(
+    "aria-label",
+    "Retry",
+  );
+  await page.evaluate(() => {
+    window.echoOnline = true;
+  });
+  await page.locator("homecall-card .main").click();
+  await expect(page.locator("homecall-card .main")).toHaveAttribute(
+    "aria-label",
+    "Record",
+  );
+  expect(await page.evaluate(() => window.statusRequests)).toBe(2);
+  expect(
+    await page.locator("homecall-card").evaluate((c) => c._selection),
+  ).toEqual(["notify.kitchen_speak"]);
+  await page.locator("homecall-card").evaluate((c) => {
+    c._phase = "recording";
+    c.hass = {
+      ...c._hass,
+      states: { "notify.kitchen_speak": { state: "unavailable" } },
+    };
+  });
+  expect(await page.locator("homecall-card").evaluate((c) => c._phase)).toBe(
+    "recording",
+  );
+  expect(await page.evaluate(() => window.statusRequests)).toBe(2);
+});
 async function geometry(page) {
   return page.locator("homecall-card").evaluate((e) => {
     const q = (s) => e.shadowRoot.querySelector(s).getBoundingClientRect(),
@@ -92,23 +179,31 @@ async function geometry(page) {
     };
   });
 }
-test("saved configuration on/off cycle restores real mounted card size", async ({
-  page,
-}) => {
-  await fixture(page);
-  const off = await geometry(page);
-  await page.locator("#toggle").click();
-  await expect(page.locator("homecall-card .targets")).toBeVisible();
-  const on = await geometry(page);
-  await page.locator("#toggle").click();
-  await expect(page.locator("homecall-card .targets")).toBeHidden();
-  await expect.poll(async () => (await geometry(page)).size).toBe(off.size);
-  expect(on.size).toBeLessThan(off.size);
-});
+for (const width of [174, 215, 231]) {
+  test(`saved selector cycles restore mounted size at ${width}×184`, async ({
+    page,
+  }) => {
+    await fixture(page, width, 184);
+    const off = await geometry(page);
+    for (let cycle = 0; cycle < 3; cycle++) {
+      await page.locator("#toggle").click();
+      await expect(page.locator("homecall-card .targets")).toBeVisible();
+      const on = await geometry(page);
+      await page.locator("#toggle").click();
+      await expect(page.locator("homecall-card .targets")).toBeHidden();
+      await expect.poll(async () => (await geometry(page)).size).toBe(off.size);
+      // On narrow cards the footer, rather than the picker, limits the circle.
+      expect(on.size).toBeLessThanOrEqual(off.size);
+      if (width >= 215) expect(on.size).toBeLessThan(off.size);
+    }
+  });
+}
 for (const [width, height] of [
+  [174, 184],
   [184, 184],
   [215, 184],
   [246, 184],
+  [231, 184],
   [376, 312],
 ]) {
   test(`center and full halo clearance across phases at ${width}×${height}`, async ({
