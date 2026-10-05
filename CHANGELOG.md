@@ -1,5 +1,11 @@
 # Changelog
 
+## 1.1.6
+
+- Update speaker compatibility guidance for Sonos, Music Assistant, Google Cast and direct EchoMuse announcements through HomeCall 1.6.0.
+- Clarify that browser recording requires HTTPS while local speaker delivery and integration sound tests can use HTTP.
+- Rebuild the versioned distribution bundle. Card runtime behavior is unchanged.
+
 ## 1.1.5
 
 - Hide the redundant status clock at the recording limit so it cannot overlap the ready-to-send caption.
