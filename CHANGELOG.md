@@ -1,5 +1,11 @@
 # Changelog
 
+## 1.0.5
+
+- Avoid rebuilding and fetching status twice when HA temporarily moves a mounted card.
+- Keep unchanged action icons mounted during loading and status updates.
+- Preserve resource cleanup on actual removal; add lifecycle browser regressions.
+
 ## 1.0.4
 
 - Match speaker-picker, discard and status icon control boundaries and corner radii.

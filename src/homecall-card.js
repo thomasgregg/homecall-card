@@ -141,8 +141,10 @@ class HomeCallCard extends HTMLElement {
     b.disabled = false;
     b.setAttribute("aria-label", this._t(text));
     b.title = this._t(text);
-    b.dataset.kind = kind;
-    b.innerHTML = '<ha-icon icon="mdi:' + kind + '"></ha-icon>';
+    if (b.dataset.kind !== kind) {
+      b.dataset.kind = kind;
+      b.innerHTML = '<ha-icon icon="mdi:' + kind + '"></ha-icon>';
+    }
     this._view.querySelector(".action-label").textContent = this._t(text);
     this._syncPhase();
   }
@@ -934,7 +936,11 @@ ha-card[data-compact="true"] .discard::part(base),.status-more::part(base){box-s
     this._view = null;
   }
   disconnectedCallback() {
-    this._close();
+    // Moving an element triggers disconnect/connect in the same turn. Keep its
+    // view and in-flight status request; release resources on actual removal.
+    queueMicrotask(() => {
+      if (!this.isConnected) this._close();
+    });
   }
 }
 if (!customElements.get("homecall-card"))

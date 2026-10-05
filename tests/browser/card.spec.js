@@ -310,3 +310,53 @@ for (const width of [177.5, 246]) {
     }
   });
 }
+
+test("moving a mounted dashboard card does not fetch or rebuild it twice", async ({
+  page,
+}) => {
+  await fixture(page, 177.5, 184, true);
+  const original = await page.locator("homecall-card").evaluate((c) => {
+    window.originalCardView = c.shadowRoot.querySelector("ha-card");
+    const container = document.createElement("section");
+    document.body.append(container);
+    container.append(c);
+    return window.statusRequests;
+  });
+  await expect
+    .poll(() => page.evaluate(() => window.statusRequests))
+    .toBe(original);
+  expect(
+    await page
+      .locator("homecall-card")
+      .evaluate(
+        (c) =>
+          c.shadowRoot.querySelector("ha-card") === window.originalCardView,
+      ),
+  ).toBe(true);
+});
+
+test("actual removal releases resources and unchanged action keeps its icon", async ({
+  page,
+}) => {
+  await fixture(page);
+  expect(
+    await page.locator("homecall-card").evaluate((c) => {
+      const icon = c.shadowRoot.querySelector(".main ha-icon");
+      c._button("Geräte werden geladen …");
+      c._button("Aufnehmen");
+      return icon === c.shadowRoot.querySelector(".main ha-icon");
+    }),
+  ).toBe(true);
+  await page.locator("homecall-card").evaluate((c) => {
+    window.removedCard = c;
+    window.releases = 0;
+    c._release = () => window.releases++;
+    c.remove();
+  });
+  await expect.poll(() => page.evaluate(() => window.releases)).toBe(1);
+  expect(
+    await page.evaluate(() =>
+      window.removedCard.shadowRoot.querySelector("ha-card"),
+    ),
+  ).toBeNull();
+});

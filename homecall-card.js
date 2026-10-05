@@ -1,4 +1,4 @@
-/*! HomeCall Card v1.0.4 | MIT License | github.com/thomasgregg/homecall-card */
+/*! HomeCall Card v1.0.5 | MIT License | github.com/thomasgregg/homecall-card */
 (() => {
   // src/layout.js
   function homeCallLayout(width, height, hasSelector = true, selectorWidth = 100, footerWidths = null) {
@@ -235,8 +235,10 @@
       b.disabled = false;
       b.setAttribute("aria-label", this._t(text));
       b.title = this._t(text);
-      b.dataset.kind = kind;
-      b.innerHTML = '<ha-icon icon="mdi:' + kind + '"></ha-icon>';
+      if (b.dataset.kind !== kind) {
+        b.dataset.kind = kind;
+        b.innerHTML = '<ha-icon icon="mdi:' + kind + '"></ha-icon>';
+      }
       this._view.querySelector(".action-label").textContent = this._t(text);
       this._syncPhase();
     }
@@ -924,7 +926,9 @@ ha-card[data-compact="true"] .discard::part(base),.status-more::part(base){box-s
       this._view = null;
     }
     disconnectedCallback() {
-      this._close();
+      queueMicrotask(() => {
+        if (!this.isConnected) this._close();
+      });
     }
   };
   if (!customElements.get("homecall-card"))
