@@ -94,7 +94,7 @@ assert.equal(fast.c._view.dataset.tone, "red");
 assert.equal(fast.nodes.get(".main").variant, "danger");
 const slow = fixture();
 advance(300);
-assert.equal(slow.nodes.get(".main").loading, true);
+assert.equal(slow.nodes.get(".main").loading, false);
 assert.equal(
   slow.nodes.get(".action-label").textContent,
   "Preparing microphone …",

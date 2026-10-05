@@ -1,4 +1,4 @@
-/*! HomeCall Card v1.0.5 | MIT License | github.com/thomasgregg/homecall-card */
+/*! HomeCall Card v1.1.0 | MIT License | github.com/thomasgregg/homecall-card */
 (() => {
   // src/layout.js
   function homeCallLayout(width, height, hasSelector = true, selectorWidth = 100, footerWidths = null) {
@@ -185,7 +185,7 @@
     "Ung\xFCltige Aufnahme. Bitte 1 bis 60 Sekunden sprechen.": "Invalid recording. Please speak for 1 to 60 seconds.",
     "Audio konnte nicht umgewandelt werden.": "Could not convert the audio.",
     "Zu viele Durchsagen. Bitte kurz warten.": "Too many announcements. Please wait a moment.",
-    "60 Sekunden erreicht. Bereit zum Senden.": "60 seconds reached. Ready to send."
+    "Zeitlimit erreicht - bereit zum Senden.": "Limit reached - ready to send."
   };
   var HomeCallCard = class extends HTMLElement {
     constructor() {
@@ -267,7 +267,8 @@ ha-card[data-tone="red"]{--homecall-tone:var(--ha-color-fill-danger-loud-resting
 .targets{margin:0 0 0 auto;max-width:100%;flex:none;pointer-events:auto;color:var(--secondary-text-color);font-size:var(--ha-font-size-m)}.targets summary{display:flex;align-items:center;justify-content:flex-end;gap:4px;cursor:pointer;list-style:none;min-height:44px;min-width:44px;max-width:100%;border-radius:var(--homecall-control-radius);padding-inline:6px;margin-inline-end:calc(var(--homecall-content-inset) - 6px);-webkit-tap-highlight-color:transparent}.targets summary span{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.targets summary::-webkit-details-marker{display:none}.targets summary:focus-visible{outline:2px solid var(--ha-color-focus);outline-offset:2px}.targets summary ha-icon{--mdc-icon-size:18px;flex:none}.targets .speaker-icon{display:none}.targets[open] .chevron{transform:rotate(180deg)}.targets summary[aria-disabled="true"]{color:var(--disabled-text-color);cursor:default}
 .list,.status-popover{position:fixed;inset:auto;margin:0;box-sizing:border-box;color:var(--primary-text-color);font:var(--ha-font-size-m)/var(--ha-line-height-normal) var(--primary-font-family,Roboto,sans-serif);padding:8px 12px;overflow:auto;overscroll-behavior:contain;background:var(--ha-card-background,var(--card-background-color));border:1px solid var(--divider-color);border-radius:var(--ha-border-radius-lg);box-shadow:var(--ha-box-shadow-l)}.list{overflow-x:hidden}.status-popover{padding:16px;overflow-wrap:anywhere}.list ha-checkbox.all{display:flex;min-height:44px;border-bottom:1px solid var(--divider-color);margin-bottom:4px;padding-bottom:4px}
 .action{display:flex;position:absolute;inset:0;pointer-events:none;flex-direction:column;align-items:center;justify-content:center}.visual{transform:translateY(var(--homecall-action-offset,0px));position:relative;display:flex;align-items:center;justify-content:center;width:calc(100% - 2*var(--homecall-padding));height:var(--homecall-visual-height,calc(var(--homecall-button-size)*1.44));max-height:calc(100% - 2*var(--homecall-padding));flex:none;isolation:isolate}.halo{position:absolute;width:calc(var(--homecall-button-size)*1.18);height:calc(var(--homecall-button-size)*1.18);border-radius:50%;background:var(--homecall-tone);opacity:.18;pointer-events:none;z-index:-1}.wave{position:absolute;inset:0;width:100%;height:100%;opacity:0;pointer-events:none;z-index:-2}.recording .wave,ha-card[data-phase="recorded"] .wave{opacity:.24}
-.main{pointer-events:auto;--ha-button-height:var(--homecall-button-size);--ha-button-border-radius:50%;--ha-button-box-shadow:none;flex:none}.main::part(base){width:var(--homecall-button-size);padding:0}.main::part(label){display:flex;align-items:center;justify-content:center}.main::part(spinner){font-size:var(--homecall-icon-size)}.main ha-icon{--mdc-icon-size:var(--homecall-icon-size)}.action-label{position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);font-size:var(--ha-font-size-m);font-weight:var(--ha-font-weight-medium);line-height:20px;max-width:var(--homecall-label-space);text-align:center;color:var(--primary-text-color);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;flex:none}
+.recording .halo{opacity:.18;background:conic-gradient(var(--homecall-tone) var(--homecall-recording-progress,0deg),transparent 0);mask:radial-gradient(circle,transparent 60%,black 61%)}ha-card[data-phase="recorded"] .action-label{white-space:normal;font-size:var(--ha-font-size-s,12px);line-height:16px}
+.main{pointer-events:auto;--ha-button-height:var(--homecall-button-size);--ha-button-border-radius:50%;--ha-button-box-shadow:none;flex:none}.main::part(base){width:var(--homecall-button-size);padding:0}.main::part(label){display:flex;align-items:center;justify-content:center}.main::part(spinner){font-size:var(--homecall-icon-size)}.main ha-icon{--mdc-icon-size:var(--homecall-icon-size)}.main[data-kind="send-outline"] ha-icon{--mdc-icon-size:calc(var(--homecall-icon-size)*.75)}.action-label{position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);font-size:var(--ha-font-size-m);font-weight:var(--ha-font-weight-medium);line-height:20px;max-width:var(--homecall-label-space);text-align:center;color:var(--primary-text-color);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;flex:none}
 ha-card[data-edge-footer="true"] .info{bottom:8px;inset-inline:8px}ha-card[data-edge-footer="true"] .time{padding-inline-end:0}
 ha-card[data-narrow="true"] .info{height:32px;min-height:32px;align-items:flex-end}ha-card[data-narrow="true"] .discard{--ha-button-height:32px}ha-card[data-narrow="true"] .discard::part(base){min-width:32px;padding:0 5px}ha-card[data-narrow="true"] .time{font-size:12px;line-height:24px;gap:6px}
 .info{display:flex;position:absolute;bottom:var(--homecall-padding);inset-inline:var(--homecall-padding);pointer-events:none;align-items:center;justify-content:space-between;gap:8px;height:44px;min-height:44px;flex:none;color:var(--secondary-text-color);font-size:var(--ha-font-size-m);line-height:20px}.discard{pointer-events:auto;--ha-button-height:44px;--ha-button-border-radius:var(--homecall-control-radius);--ha-button-box-shadow:none;flex:none}.discard::part(base){padding:0 12px;min-width:44px}.discard::part(label){display:flex;align-items:center;gap:8px;font-size:var(--ha-font-size-m);font-weight:400;line-height:20px}.discard ha-icon{--mdc-icon-size:20px}.message-control{display:flex;align-items:center;justify-content:center;min-width:0;gap:4px}.status{line-height:20px;overflow:hidden;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow-wrap:anywhere}.status-more{pointer-events:auto;flex:none;color:var(--secondary-text-color)}ha-card[data-phase="error"] .status-more{color:var(--error-color)}ha-card[data-phase="sent"] .status-more{color:var(--success-color)}.time{display:flex;align-items:center;gap:8px;margin-inline-start:auto;padding-inline-end:var(--homecall-content-inset);white-space:nowrap;font-variant-numeric:tabular-nums}.recording .time:before{content:'';display:block;width:8px;height:8px;flex:none;border-radius:50%;background:var(--ha-color-fill-danger-loud-resting,var(--error-color))}
@@ -278,7 +279,7 @@ ha-card[data-compact="true"] .targets summary{box-sizing:border-box;width:var(--
 ha-card[data-compact="true"] .discard::part(base),.status-more::part(base){box-sizing:border-box;width:var(--homecall-control-size);min-width:var(--homecall-control-size);padding:0}
 .status-more{--ha-button-height:var(--homecall-control-size);--ha-button-border-radius:var(--homecall-control-radius);--ha-button-box-shadow:none}.status-more ha-icon{--mdc-icon-size:20px}
 @media(hover:hover){.targets summary:hover{background:var(--ha-color-fill-neutral-quiet-hover)}}
-</style><ha-card><div class="header"><details class="targets"><summary><ha-icon class="speaker-icon" icon="mdi:volume-high"></ha-icon><span></span><ha-icon class="chevron" icon="mdi:chevron-down"></ha-icon></summary></details></div><div class="list" popover="auto"></div><div class="status-popover" popover="auto"></div><div class="action"><div class="visual"><canvas class="wave" aria-label="${this._t("Mikrofonpegel")}"></canvas><div class="halo" aria-hidden="true"></div><ha-button class="main" appearance="accent" variant="brand" disabled></ha-button></div></div><div class="info"><div class="action-label"></div><ha-button class="discard" appearance="plain" variant="neutral" hidden><ha-icon icon="mdi:delete-outline"></ha-icon><span class="discard-label">${this._t("Verwerfen")}</span></ha-button><div class="message-control"><ha-button class="status-more" appearance="plain" variant="neutral" hidden></ha-button><div class="status" role="status" aria-live="polite"></div></div><div class="time" hidden>00:00</div></div></ha-card>`;
+</style><ha-card><div class="header"><details class="targets"><summary><ha-icon class="speaker-icon" icon="mdi:volume-high"></ha-icon><span></span><ha-icon class="chevron" icon="mdi:chevron-down"></ha-icon></summary></details></div><div class="list" popover="auto"></div><div class="status-popover" popover="auto"></div><div class="action"><div class="visual"><canvas class="wave" aria-label="${this._t("Mikrofonpegel")}"></canvas><div class="halo" aria-hidden="true"></div><ha-button class="main" appearance="accent" variant="brand"></ha-button></div></div><div class="info"><div class="action-label"></div><ha-button class="discard" appearance="plain" variant="neutral" hidden><ha-icon icon="mdi:delete-outline"></ha-icon><span class="discard-label">${this._t("Verwerfen")}</span></ha-button><div class="message-control"><ha-button class="status-more" appearance="plain" variant="neutral" hidden></ha-button><div class="status" role="status" aria-live="polite"></div></div><div class="time" hidden>1:00</div></div></ha-card>`;
       this._view = this.shadowRoot.querySelector("ha-card");
       const discard = this._view.querySelector(".discard");
       discard.setAttribute("aria-label", this._t("Aufnahme verwerfen"));
@@ -324,7 +325,7 @@ ha-card[data-compact="true"] .discard::part(base),.status-more::part(base){box-s
         },
         true
       );
-      this._view.querySelector(".main").onclick = () => this._phase === "ready" ? this._start() : ["recording", "recorded"].includes(this._phase) ? this._finish() : this._reset();
+      this._view.querySelector(".main").onclick = () => this._phase === "ready" ? this._start() : ["recording", "recorded"].includes(this._phase) ? this._finish() : !["loading", "starting"].includes(this._phase) && this._reset();
       this._visibility = () => {
         if (document.hidden && ["starting", "recording"].includes(this._phase))
           this._reset();
@@ -421,11 +422,18 @@ ha-card[data-compact="true"] .discard::part(base),.status-more::part(base){box-s
       const capturing = this._phase === "recording";
       this._view.dataset.tone = capturing ? "red" : "blue";
       this._view.querySelector(".main").variant = capturing ? "danger" : "brand";
-      const active = ["starting", "recording", "recorded"].includes(this._phase), recording = ["recording", "recorded"].includes(this._phase), starting = this._phase === "starting", busy = ["loading", "sending"].includes(this._phase) || starting && this._startingIndicator;
+      const active = ["starting", "recording", "recorded"].includes(this._phase), recording = ["recording", "recorded"].includes(this._phase), starting = this._phase === "starting", busy = this._phase === "loading" && this._loadingIndicator || this._phase === "sending";
       this._view.querySelector(".discard").hidden = !active;
       this._view.querySelector(".time").hidden = !(recording || starting);
       this._view.querySelector(".main").loading = busy;
-      this._view.querySelector(".main").setAttribute("aria-busy", String(busy || starting));
+      this._view.querySelector(".main").setAttribute(
+        "aria-busy",
+        String(busy || starting || this._phase === "loading")
+      );
+      this._view.querySelector(".main").setAttribute(
+        "aria-disabled",
+        String(["loading", "starting"].includes(this._phase))
+      );
       const summary = this._view.querySelector("summary");
       summary.setAttribute(
         "aria-disabled",
@@ -433,10 +441,10 @@ ha-card[data-compact="true"] .discard::part(base),.status-more::part(base){box-s
       );
       summary.tabIndex = ["starting", "sending"].includes(this._phase) ? -1 : 0;
       const info = this._view.querySelector(".message-control"), status = this._view.querySelector(".status"), icon = this._view.querySelector(".status-more");
-      info.classList.toggle("sr-only", recording || starting);
+      info.classList.toggle("sr-only", this._phase === "recording" || starting);
       status.classList.toggle("sr-only", true);
       const noSelection = this._phase === "ready" && this._selection?.length === 0;
-      icon.hidden = recording || starting || this._phase === "ready" && !noSelection;
+      icon.hidden = this._phase === "recorded" && !this._layout?.showLabel || this._phase === "loading" && !this._loadingIndicator || this._phase === "recording" || starting || this._phase === "ready" && !noSelection;
       icon.innerHTML = `<ha-icon icon="mdi:${this._phase === "sent" ? "check-circle-outline" : this._phase === "error" || noSelection ? "alert-circle-outline" : "clock-outline"}"></ha-icon>`;
     }
     _showStatus() {
@@ -468,9 +476,15 @@ ha-card[data-compact="true"] .discard::part(base),.status-more::part(base){box-s
       this._chunks = [];
       this._levels = Array(64).fill(0);
       this._phase = "loading";
+      clearTimeout(this._loadingTimer);
+      this._loadingIndicator = false;
+      this._loadingTimer = setTimeout(() => {
+        if (session !== this._session || this._phase !== "loading") return;
+        this._loadingIndicator = true;
+        this._syncPhase();
+      }, 300);
       this._setStatus("Ger\xE4te werden geladen \u2026");
       this._button("Ger\xE4te werden geladen \u2026");
-      this._view.querySelector(".main").disabled = true;
       const summary = this._view.querySelector("summary");
       summary.querySelector("span").textContent = this._t(
         "Ger\xE4te werden geladen \u2026"
@@ -514,6 +528,8 @@ ha-card[data-compact="true"] .discard::part(base),.status-more::part(base){box-s
         this._view.querySelector(".list").textContent = this._t(message);
         this._setStatus(message);
         this._doneButton();
+      } finally {
+        if (session === this._session) clearTimeout(this._loadingTimer);
       }
     }
     _reset() {
@@ -530,7 +546,7 @@ ha-card[data-compact="true"] .discard::part(base),.status-more::part(base){box-s
       const status = this._view.querySelector(".status-popover");
       if (status.matches(":popover-open")) status.hidePopover();
       this._view.classList.remove("recording");
-      this._view.querySelector(".time").textContent = "00:00";
+      this._view.querySelector(".time").textContent = "1:00";
       if (this._availabilityError || !this._view.querySelector(".echo-form") || !this._targets?.some((t) => t.available)) {
         this._retryAvailability();
         return;
@@ -566,7 +582,6 @@ ha-card[data-compact="true"] .discard::part(base),.status-more::part(base){box-s
       const session = this._session;
       this._phase = "starting";
       this._view.querySelector(".targets").open = false;
-      this._view.querySelector(".main").disabled = true;
       this._queueStartingIndicator();
       this._setStatus("Mikrofon wird vorbereitet \u2026");
       try {
@@ -638,7 +653,7 @@ ha-card[data-compact="true"] .discard::part(base),.status-more::part(base){box-s
         this._started = performance.now();
         this._view.querySelector(".main").disabled = false;
         this._view.classList.add("recording");
-        this._button("Senden", "volume-high");
+        this._button("Senden", "microphone");
         this._setStatus("Sprich jetzt");
         this._draw();
         this._timer = setTimeout(() => this._stopAtLimit(), 6e4);
@@ -721,7 +736,11 @@ ha-card[data-compact="true"] .discard::part(base),.status-more::part(base){box-s
       this._phase = "recorded";
       this._release();
       this._view.classList.remove("recording");
-      this._setStatus("60 Sekunden erreicht. Bereit zum Senden.");
+      this._button("Senden", "send-outline");
+      this._view.querySelector(".action-label").textContent = this._t(
+        "Zeitlimit erreicht - bereit zum Senden."
+      );
+      this._setStatus("Zeitlimit erreicht - bereit zum Senden.");
       this._draw();
     }
     _draw() {
@@ -746,11 +765,16 @@ ha-card[data-compact="true"] .discard::part(base),.status-more::part(base){box-s
         ctx.fill();
       }
       if (["recording", "recorded"].includes(this._phase)) {
-        const seconds = Math.min(
-          60,
-          Math.floor((performance.now() - this._started) / 1e3)
+        const elapsed = this._phase === "recorded" ? 60 : Math.max(
+          0,
+          Math.min(60, (performance.now() - this._started) / 1e3)
         );
-        this._view.querySelector(".time").textContent = String(Math.floor(seconds / 60)).padStart(2, "0") + ":" + String(seconds % 60).padStart(2, "0");
+        const remaining = Math.ceil(60 - elapsed);
+        this._view.style.setProperty(
+          "--homecall-recording-progress",
+          `${elapsed * 6}deg`
+        );
+        this._view.querySelector(".time").textContent = String(Math.floor(remaining / 60)) + ":" + String(remaining % 60).padStart(2, "0");
       }
       if (this._phase === "recording")
         this._raf = requestAnimationFrame(() => this._draw());
@@ -908,6 +932,7 @@ ha-card[data-compact="true"] .discard::part(base),.status-more::part(base){box-s
         );
     }
     _close() {
+      clearTimeout(this._loadingTimer);
       clearTimeout(this._readyTimer);
       this._layoutObserver?.disconnect();
       cancelAnimationFrame(this._layoutRaf);

@@ -120,7 +120,7 @@ function fixture(phase = "recording") {
     assert.equal(c._chunks.length, 0);
     assert.equal(c._samples, 0);
     assert.ok(c._levels.every((v) => v === 0));
-    assert.equal(nodes[".time"].textContent, "00:00");
+    assert.equal(nodes[".time"].textContent, "1:00");
     assert.equal(nodes[".main"].disabled, false);
     assert.equal(stops, 1);
     assert.equal(closes, 1);

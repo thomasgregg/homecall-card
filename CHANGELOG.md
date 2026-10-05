@@ -1,5 +1,13 @@
 # Changelog
 
+## 1.1.0
+
+- Count down from 1:00 and fill the recording ring clockwise toward the 60-second limit.
+- Stop recording at the limit without sending; show a smaller outlined Send icon and retain Discard.
+- Show the limit message on larger cards and keep tiny-card footers clear.
+- Preserve Home Assistant theme colours and the soft outer-ring opacity.
+- Keep the microphone stable through quick initial loads and microphone startup; avoid transient disabled styling and startup spinners.
+
 ## 1.0.5
 
 - Avoid rebuilding and fetching status twice when HA temporarily moves a mounted card.

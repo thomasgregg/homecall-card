@@ -59,10 +59,10 @@ The root JavaScript file is a self-contained build. You do not need npm or a bui
 
 1. Choose speakers, if the picker is visible.
 2. Tap the blue microphone and allow browser microphone access.
-3. Speak; the red action, waveform, recording dot, and timer indicate capture.
+3. Speak; the red action and waveform indicate capture. The outer ring fills clockwise while the timer counts down from **1:00**.
 4. Tap **Send**, or use **Discard** to start again.
 
-Recording stops at 60 seconds and waits for you to send. After a fully accepted send, the card returns to ready after five seconds and preserves speaker selection. Partial failures stay visible for review. An audio-fetch receipt confirms retrieval, not audible playback.
+At **0:00**, recording stops automatically and the button switches to a smaller outlined Send icon. It never sends automatically. Press **Send** or **Discard**; larger cards also show “Limit reached - ready to send.” After a fully accepted send, the card returns to ready after five seconds and preserves speaker selection. Partial failures stay visible for review. An audio-fetch receipt confirms retrieval, not audible playback.
 
 ## Configuration
 

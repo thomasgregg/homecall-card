@@ -360,3 +360,126 @@ test("actual removal releases resources and unchanged action keeps its icon", as
     ),
   ).toBeNull();
 });
+
+test("fast loading preserves the microphone; slow loading shows progress without allowing recording", async ({
+  page,
+}) => {
+  await fixture(page, 215, 184, true);
+  await page.locator("homecall-card").evaluate((c) => {
+    window.echoOnline = true;
+    window.resolveStatus = null;
+    const fetchStatus = c._hass.fetchWithAuth;
+    c._hass.fetchWithAuth = () =>
+      new Promise((resolve) => {
+        window.resolveStatus = async () => resolve(await fetchStatus());
+      });
+    window.loadPromise = c._load();
+    window.loadingIcon = c.shadowRoot.querySelector(".main ha-icon");
+  });
+  const button = page.locator("homecall-card .main");
+  expect(await button.evaluate((b) => !!b.loading)).toBe(false);
+  expect(await button.evaluate((b) => !!b.disabled)).toBe(false);
+  await expect(button).toHaveAttribute("aria-busy", "true");
+  await button.click();
+  expect(await page.locator("homecall-card").evaluate((c) => c._phase)).toBe(
+    "loading",
+  );
+  await page.evaluate(async () => {
+    await window.resolveStatus();
+    await window.loadPromise;
+  });
+  expect(await button.evaluate((b) => !!b.loading)).toBe(false);
+  expect(
+    await button.evaluate(
+      (b) => b.querySelector("ha-icon") === window.loadingIcon,
+    ),
+  ).toBe(true);
+  await expect(button).toHaveAttribute("aria-disabled", "false");
+  await page.locator("homecall-card").evaluate((c) => {
+    window.loadPromise = c._load();
+  });
+  await expect.poll(() => button.evaluate((b) => !!b.loading)).toBe(true);
+  await page.evaluate(async () => {
+    await window.resolveStatus();
+    await window.loadPromise;
+  });
+  expect(await button.evaluate((b) => !!b.loading)).toBe(false);
+});
+
+test("countdown and ring reach the limit without sending, and expose Send on a tiny card", async ({
+  page,
+}) => {
+  await fixture(page, 177.5, 184);
+  await page.locator("homecall-card").evaluate((c) => {
+    c._phase = "recording";
+    c._started = performance.now() - 30000;
+    c._view.classList.add("recording");
+    c._button("Senden", "microphone");
+    c._draw();
+    cancelAnimationFrame(c._raf);
+  });
+  await expect(page.locator("homecall-card .time")).toHaveText("0:30");
+  const progress = await page
+    .locator("homecall-card ha-card")
+    .evaluate((el) =>
+      parseFloat(el.style.getPropertyValue("--homecall-recording-progress")),
+    );
+  expect(progress).toBeGreaterThanOrEqual(180);
+  expect(progress).toBeLessThan(186);
+  await page.locator("homecall-card").evaluate((c) => {
+    window.sendsAtLimit = 0;
+    c._finish = () => window.sendsAtLimit++;
+    c._stopAtLimit();
+  });
+  await expect(page.locator("homecall-card .time")).toHaveText("0:00");
+  await expect(page.locator("homecall-card .main ha-icon")).toHaveAttribute(
+    "icon",
+    "mdi:send-outline",
+  );
+  await expect(page.locator("homecall-card ha-card")).toHaveAttribute(
+    "data-tone",
+    "blue",
+  );
+  await expect(page.locator("homecall-card .discard")).toBeVisible();
+  await expect(page.locator("homecall-card .status-more")).toBeHidden();
+  expect(await page.evaluate(() => window.sendsAtLimit)).toBe(0);
+  await page.locator("homecall-card .main").click();
+  expect(await page.evaluate(() => window.sendsAtLimit)).toBe(1);
+});
+
+test("microphone startup keeps its native appearance and ignores repeat clicks", async ({
+  page,
+}) => {
+  await fixture(page);
+  await page.locator("homecall-card").evaluate((c) => {
+    window.AudioContext = class {
+      resume() {
+        return new Promise(() => {});
+      }
+    };
+    window.isSecureContext ||
+      Object.defineProperty(window, "isSecureContext", { value: true });
+    if (!navigator.mediaDevices)
+      Object.defineProperty(navigator, "mediaDevices", {
+        value: { getUserMedia() {} },
+      });
+    window.startIcon = c.shadowRoot.querySelector(".main ha-icon");
+  });
+  await page.locator("homecall-card .main").click({ force: true });
+  await expect(page.locator("homecall-card .main")).toHaveAttribute(
+    "aria-disabled",
+    "true",
+  );
+  expect(
+    await page.locator("homecall-card .main").evaluate((b) => !!b.disabled),
+  ).toBe(false);
+  await page.locator("homecall-card .main").click({ force: true });
+  expect(
+    await page.locator("homecall-card ha-card").getAttribute("data-phase"),
+  ).toBe("starting");
+  expect(
+    await page
+      .locator("homecall-card .main")
+      .evaluate((b) => b.querySelector("ha-icon") === window.startIcon),
+  ).toBe(true);
+});
