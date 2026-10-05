@@ -1,4 +1,4 @@
-<p align="center"><img src="docs/assets/hero.svg" alt="HomeCall Card — your voice across your home" width="100%"></p>
+<p align="center"><img src="https://raw.githubusercontent.com/thomasgregg/homecall-card/main/docs/assets/hero.svg" alt="HomeCall Card — your voice across your home" width="100%"></p>
 
 <p align="center">
 <a href="https://github.com/thomasgregg/homecall-card/actions/workflows/ci.yml"><img src="https://github.com/thomasgregg/homecall-card/actions/workflows/ci.yml/badge.svg" alt="Tests"></a>
