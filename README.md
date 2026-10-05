@@ -10,7 +10,7 @@
 
 Tap to record. Choose the rooms. Tap to send. HomeCall Card gives Home Assistant a responsive microphone interface with a waveform, recording timer, recipient picker, and clear delivery feedback. It requires the separate [HomeCall integration](https://github.com/thomasgregg/homecall).
 
-**HomeCall supports Alexa/Echo, compatible DLNA speakers, Sonos, Music Assistant players, Google Cast and EchoMuse Dots.** Configure speakers in the integration, then select them in the card. Direct EchoMuse playback requires HomeCall 1.6.0 or newer and Dots connected through Home Assistant’s ESPHome integration; Music Assistant is not required. The card’s recording and speaker-picker behavior is shared across platforms. See the integration’s [speaker compatibility guide](https://github.com/thomasgregg/homecall#speaker-compatibility) and [EchoMuse setup](https://github.com/thomasgregg/homecall/blob/main/docs/echomuse.md) for setup, playback behavior and hardware verification.
+**HomeCall supports Alexa/Echo, compatible DLNA speakers, Sonos, Music Assistant players, Google Cast and EchoMuse Dots.** Configure speakers in the integration, then select them in the card. EchoMuse playback requires HomeCall 1.6.0 or newer and Dots connected through Home Assistant’s ESPHome integration; Music Assistant is not required. The card’s recording and speaker-picker behavior is shared across platforms. See the integration’s [speaker compatibility guide](https://github.com/thomasgregg/homecall#speaker-compatibility) and [EchoMuse setup](https://github.com/thomasgregg/homecall/blob/main/docs/echomuse.md) for setup, playback behavior and hardware verification.
 
 ## Contents
 
