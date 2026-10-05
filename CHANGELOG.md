@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased
+## 1.1.5
 
 - Hide the redundant status clock at the recording limit so it cannot overlap the ready-to-send caption.
 - Add English and German browser regression coverage for recording-limit footer clearance.
