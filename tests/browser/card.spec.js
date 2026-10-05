@@ -483,3 +483,138 @@ test("microphone startup keeps its native appearance and ignores repeat clicks",
       .evaluate((b) => b.querySelector("ha-icon") === window.startIcon),
   ).toBe(true);
 });
+
+for (const width of [160, 177.5, 246, 376]) {
+  test(`one-row controls stay centered and timer sits below speaker at ${width}px`, async ({
+    page,
+  }) => {
+    await fixture(page, width, 56);
+    await page.locator("#toggle").click();
+    for (const phase of [
+      "ready",
+      "loading",
+      "starting",
+      "recording",
+      "recorded",
+      "sending",
+      "sent",
+      "error",
+    ]) {
+      await page.locator("homecall-card").evaluate((c, phase) => {
+        c._phase = phase;
+        c._view.classList.toggle("recording", phase === "recording");
+        c._syncPhase();
+        c._applyLayout();
+      }, phase);
+      const g = await page.locator("homecall-card").evaluate((c) => {
+        const q = (s) => c.shadowRoot.querySelector(s).getBoundingClientRect();
+        const card = q("ha-card"),
+          main = q(".main"),
+          picker = q("summary"),
+          trash = q(".discard"),
+          time = q(".time"),
+          wave = q(".wave");
+        const cy = (r) => r.top + r.height / 2;
+        return {
+          height: card.height,
+          center: cy(card),
+          main: cy(main),
+          picker: cy(picker),
+          trash: trash.height ? cy(trash) : null,
+          time: time.height
+            ? {
+                top: time.top,
+                bottom: time.bottom,
+                cx: time.left + time.width / 2,
+              }
+            : null,
+          pickerBottom: picker.bottom,
+          pickerCenterX: picker.left + picker.width / 2,
+          bottom: card.bottom,
+          waveLeft: wave.left,
+          waveRight: wave.right,
+          pickerLeft: picker.left,
+          trashRight: trash.right,
+          mainWidth: main.width,
+        };
+      });
+      expect(g.height).toBe(56);
+      expect(g.main).toBeCloseTo(g.center, 1);
+      expect(g.picker).toBeCloseTo(g.center, 1);
+      if (g.trash !== null) expect(g.trash).toBeCloseTo(g.center, 1);
+      if (g.time) {
+        expect(g.time.top).toBeGreaterThan(g.picker - 1);
+        expect(g.time.bottom).toBeLessThanOrEqual(g.bottom);
+        expect(g.time.cx).toBeCloseTo(g.pickerCenterX, 1);
+      }
+      expect(g.waveRight).toBeLessThan(g.pickerLeft);
+      if (g.trash !== null) expect(g.waveLeft).toBeGreaterThan(g.trashRight);
+      expect(g.mainWidth).toBe(36);
+    }
+    await page.locator("homecall-card").evaluate((c) => {
+      c._phase = "ready";
+      c._syncPhase();
+      c._view.querySelector(".list").textContent = "Kitchen";
+    });
+    await page.locator("homecall-card summary").click();
+    await expect(page.locator("homecall-card .list")).toBeVisible();
+    const list = await page.locator("homecall-card .list").boundingBox();
+    expect(list.width).toBeGreaterThanOrEqual(240);
+    await page.keyboard.press("Escape");
+    await expect(page.locator("homecall-card .list")).toBeHidden();
+  });
+}
+
+for (const selector of [true, false]) {
+  test(`one-row countdown digits and recording dot align with selector ${selector}`, async ({
+    page,
+  }) => {
+    await fixture(page, 246, 56);
+    if (selector) await page.locator("#toggle").click();
+    for (const phase of ["starting", "recording", "recorded"]) {
+      const geometry = await page
+        .locator("homecall-card")
+        .evaluate((c, phase) => {
+          c._phase = phase;
+          c._view.classList.toggle("recording", phase === "recording");
+          c._view.querySelector(".time").textContent = "0:43";
+          c._syncPhase();
+          const time = c._view.querySelector(".time");
+          const range = document.createRange();
+          range.selectNodeContents(time);
+          const digits = range.getBoundingClientRect();
+          const card = c._view.getBoundingClientRect();
+          const timer = time.getBoundingClientRect();
+          const speaker = c._view
+            .querySelector("summary")
+            .getBoundingClientRect();
+          const dot = getComputedStyle(time, "::before");
+          return {
+            digitX: digits.x + digits.width / 2,
+            digitY: digits.y + digits.height / 2,
+            timerX: timer.x + timer.width / 2,
+            timerY: timer.y + timer.height / 2,
+            speakerX: speaker.x + speaker.width / 2,
+            cardY: card.y + card.height / 2,
+            dotPosition: dot.position,
+            dotTop: parseFloat(dot.top),
+            timerHeight: timer.height,
+            waveformRight: c._view
+              .querySelector(".wave")
+              .getBoundingClientRect().right,
+            timerLeft: timer.left,
+          };
+        }, phase);
+      expect(geometry.digitX).toBeCloseTo(geometry.timerX, 1);
+      if (selector) expect(geometry.digitX).toBeCloseTo(geometry.speakerX, 1);
+      else expect(geometry.timerY).toBeCloseTo(geometry.cardY, 1);
+      if (phase === "recording") {
+        expect(
+          geometry.timerLeft - geometry.waveformRight,
+        ).toBeGreaterThanOrEqual(12);
+        expect(geometry.dotPosition).toBe("absolute");
+        expect(geometry.dotTop).toBeCloseTo(geometry.timerHeight / 2, 1);
+      }
+    }
+  });
+}

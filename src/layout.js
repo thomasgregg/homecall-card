@@ -6,6 +6,30 @@ export function homeCallLayout(
   selectorWidth = 100,
   footerWidths = null,
 ) {
+  // One-row cards reserve the same side controls in every phase.
+  if (height < 120) {
+    const padding = 6;
+    const button = Math.max(
+      24,
+      Math.floor(Math.min(36, (height - 12) / 1.18, width - 112)),
+    );
+    return {
+      short: true,
+      compact: true,
+      tiny: true,
+      padding,
+      footerPadding: padding,
+      controlWidths: { discard: 32, time: 44 },
+      edgeFooter: false,
+      selectorTop: height / 2 - 16,
+      showLabel: false,
+      labelSpace: 0,
+      button,
+      centerY: height / 2,
+      visualHeight: height - 12,
+      icon: Math.round(button * 0.56),
+    };
+  }
   const compact = width < 280 || height < 240,
     tiny = width < 200 || height < 200;
   const padding = tiny ? 8 : compact ? 12 : 20,
@@ -154,7 +178,29 @@ export function homeCallLayout(
   };
 }
 // The native popover stays within the visible part of its own card.
-export function homeCallRecipientBounds(card, anchor, viewport, inset = 16) {
+export function homeCallRecipientBounds(
+  card,
+  anchor,
+  viewport,
+  inset = 16,
+  outside = false,
+) {
+  if (outside) {
+    const width = Math.min(280, Math.max(240, card.width), viewport.width - 16);
+    const below = viewport.height - anchor.bottom - 12;
+    const above = anchor.top - 12;
+    const maxHeight = Math.min(240, Math.max(below, above));
+    if (maxHeight < 44) return null;
+    return {
+      left: Math.max(
+        8,
+        Math.min(anchor.right - width, viewport.width - width - 8),
+      ),
+      top: below >= above ? anchor.bottom + 4 : anchor.top - maxHeight - 4,
+      width,
+      maxHeight,
+    };
+  }
   const left = Math.max(card.left + inset, 8),
     right = Math.min(card.right - inset, viewport.width - 8);
   const top = Math.max(card.top + inset, 8),

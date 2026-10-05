@@ -1,7 +1,30 @@
-/*! HomeCall Card v1.1.0 | MIT License | github.com/thomasgregg/homecall-card */
+/*! HomeCall Card v1.1.1 | MIT License | github.com/thomasgregg/homecall-card */
 (() => {
   // src/layout.js
   function homeCallLayout(width, height, hasSelector = true, selectorWidth = 100, footerWidths = null) {
+    if (height < 120) {
+      const padding2 = 6;
+      const button2 = Math.max(
+        24,
+        Math.floor(Math.min(36, (height - 12) / 1.18, width - 112))
+      );
+      return {
+        short: true,
+        compact: true,
+        tiny: true,
+        padding: padding2,
+        footerPadding: padding2,
+        controlWidths: { discard: 32, time: 44 },
+        edgeFooter: false,
+        selectorTop: height / 2 - 16,
+        showLabel: false,
+        labelSpace: 0,
+        button: button2,
+        centerY: height / 2,
+        visualHeight: height - 12,
+        icon: Math.round(button2 * 0.56)
+      };
+    }
     const compact = width < 280 || height < 240, tiny = width < 200 || height < 200;
     const padding = tiny ? 8 : compact ? 12 : 20, selectorTop = tiny ? 6 : compact ? 8 : 10;
     const cornerX = Math.max(0, width / 2 - padding - selectorWidth);
@@ -118,7 +141,23 @@
       icon: Math.round(button * 0.56)
     };
   }
-  function homeCallRecipientBounds(card, anchor, viewport, inset = 16) {
+  function homeCallRecipientBounds(card, anchor, viewport, inset = 16, outside = false) {
+    if (outside) {
+      const width = Math.min(280, Math.max(240, card.width), viewport.width - 16);
+      const below = viewport.height - anchor.bottom - 12;
+      const above = anchor.top - 12;
+      const maxHeight2 = Math.min(240, Math.max(below, above));
+      if (maxHeight2 < 44) return null;
+      return {
+        left: Math.max(
+          8,
+          Math.min(anchor.right - width, viewport.width - width - 8)
+        ),
+        top: below >= above ? anchor.bottom + 4 : anchor.top - maxHeight2 - 4,
+        width,
+        maxHeight: maxHeight2
+      };
+    }
     const left = Math.max(card.left + inset, 8), right = Math.min(card.right - inset, viewport.width - 8);
     const top = Math.max(card.top + inset, 8), bottom = Math.min(card.bottom - inset, viewport.height - 8);
     const listTop = Math.max(top, anchor.bottom + 4), maxHeight = Math.min(240, bottom - listTop);
@@ -250,10 +289,10 @@
       return {};
     }
     getCardSize() {
-      return 6;
+      return 1;
     }
     getGridOptions() {
-      return { columns: 12, rows: 5, min_columns: 6, min_rows: 3 };
+      return { columns: 6, rows: 1, min_columns: 6, min_rows: 1 };
     }
     connectedCallback() {
       if (!this._view) this._render();
@@ -262,7 +301,7 @@
       if (!this.config || !this._hass || !this.isConnected) return;
       this.shadowRoot.innerHTML = `<style>
 :host{display:block;height:100%;min-width:0;font-family:var(--primary-font-family,Roboto,sans-serif);--homecall-button-size:112px;--homecall-icon-size:63px;--homecall-padding:20px;--homecall-selector-top:10px;--homecall-content-inset:13px;--homecall-control-size:44px;--homecall-control-radius:var(--ha-border-radius-md)}
-ha-card{display:flex;position:relative;flex-direction:column;box-sizing:border-box;height:100%;min-height:184px;min-width:0;padding:var(--homecall-padding);color:var(--primary-text-color);--homecall-tone:var(--ha-color-fill-primary-loud-resting,var(--primary-color))}
+ha-card{display:flex;position:relative;flex-direction:column;box-sizing:border-box;height:100%;min-height:56px;min-width:0;padding:var(--homecall-padding);color:var(--primary-text-color);--homecall-tone:var(--ha-color-fill-primary-loud-resting,var(--primary-color))}
 ha-card[data-tone="red"]{--homecall-tone:var(--ha-color-fill-danger-loud-resting,var(--error-color))}[hidden]{display:none!important}.header{display:flex;align-items:center;justify-content:space-between;gap:12px;min-height:44px;position:absolute;top:var(--homecall-selector-top);inset-inline:var(--homecall-padding);z-index:2;pointer-events:none}
 .targets{margin:0 0 0 auto;max-width:100%;flex:none;pointer-events:auto;color:var(--secondary-text-color);font-size:var(--ha-font-size-m)}.targets summary{display:flex;align-items:center;justify-content:flex-end;gap:4px;cursor:pointer;list-style:none;min-height:44px;min-width:44px;max-width:100%;border-radius:var(--homecall-control-radius);padding-inline:6px;margin-inline-end:calc(var(--homecall-content-inset) - 6px);-webkit-tap-highlight-color:transparent}.targets summary span{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.targets summary::-webkit-details-marker{display:none}.targets summary:focus-visible{outline:2px solid var(--ha-color-focus);outline-offset:2px}.targets summary ha-icon{--mdc-icon-size:18px;flex:none}.targets .speaker-icon{display:none}.targets[open] .chevron{transform:rotate(180deg)}.targets summary[aria-disabled="true"]{color:var(--disabled-text-color);cursor:default}
 .list,.status-popover{position:fixed;inset:auto;margin:0;box-sizing:border-box;color:var(--primary-text-color);font:var(--ha-font-size-m)/var(--ha-line-height-normal) var(--primary-font-family,Roboto,sans-serif);padding:8px 12px;overflow:auto;overscroll-behavior:contain;background:var(--ha-card-background,var(--card-background-color));border:1px solid var(--divider-color);border-radius:var(--ha-border-radius-lg);box-shadow:var(--ha-box-shadow-l)}.list{overflow-x:hidden}.status-popover{padding:16px;overflow-wrap:anywhere}.list ha-checkbox.all{display:flex;min-height:44px;border-bottom:1px solid var(--divider-color);margin-bottom:4px;padding-bottom:4px}
@@ -278,6 +317,18 @@ ha-card[data-narrow="true"]{--homecall-control-size:32px}
 ha-card[data-compact="true"] .targets summary{box-sizing:border-box;width:var(--homecall-control-size);height:var(--homecall-control-size);min-width:var(--homecall-control-size);min-height:var(--homecall-control-size)}
 ha-card[data-compact="true"] .discard::part(base),.status-more::part(base){box-sizing:border-box;width:var(--homecall-control-size);min-width:var(--homecall-control-size);padding:0}
 .status-more{--ha-button-height:var(--homecall-control-size);--ha-button-border-radius:var(--homecall-control-radius);--ha-button-box-shadow:none}.status-more ha-icon{--mdc-icon-size:20px}
+/* In a one-row card, side icons share the action's vertical centerline. */
+ha-card[data-short="true"]{--homecall-control-size:32px}
+ha-card[data-short="true"] .header{top:calc(50% - 16px);min-height:32px;height:32px}
+ha-card[data-short="true"] .targets summary{margin-inline-end:6px}
+ha-card[data-short="true"] .visual{width:calc(100% - 100px)}
+ha-card[data-short="true"] .wave{width:calc(100% - 12px);inset-inline-start:0;inset-inline-end:12px}
+ha-card[data-short="true"] .info{inset:0 var(--homecall-padding);height:100%;min-height:0}
+ha-card[data-short="true"] .discard,ha-card[data-short="true"] .message-control{position:absolute;inset-inline-start:6px;top:calc(50% - 16px);height:32px}
+ha-card[data-short="true"] .discard{--ha-button-height:32px}
+ha-card[data-short="true"] .time{position:absolute;inset-inline-end:0;top:calc(50% + 11px);width:44px;height:14px;justify-content:center;margin:0;padding:0;font-size:var(--ha-font-size-s,12px);line-height:14px;gap:4px}
+ha-card[data-short="true"] .time:before{position:absolute;inset-inline-start:0;top:50%;transform:translateY(-50%);width:6px;height:6px}
+ha-card[data-short="true"]:has(.header[hidden]) .time{top:calc(50% - 7px)}
 @media(hover:hover){.targets summary:hover{background:var(--ha-color-fill-neutral-quiet-hover)}}
 </style><ha-card><div class="header"><details class="targets"><summary><ha-icon class="speaker-icon" icon="mdi:volume-high"></ha-icon><span></span><ha-icon class="chevron" icon="mdi:chevron-down"></ha-icon></summary></details></div><div class="list" popover="auto"></div><div class="status-popover" popover="auto"></div><div class="action"><div class="visual"><canvas class="wave" aria-label="${this._t("Mikrofonpegel")}"></canvas><div class="halo" aria-hidden="true"></div><ha-button class="main" appearance="accent" variant="brand"></ha-button></div></div><div class="info"><div class="action-label"></div><ha-button class="discard" appearance="plain" variant="neutral" hidden><ha-icon icon="mdi:delete-outline"></ha-icon><span class="discard-label">${this._t("Verwerfen")}</span></ha-button><div class="message-control"><ha-button class="status-more" appearance="plain" variant="neutral" hidden></ha-button><div class="status" role="status" aria-live="polite"></div></div><div class="time" hidden>1:00</div></div></ha-card>`;
       this._view = this.shadowRoot.querySelector("ha-card");
@@ -346,7 +397,8 @@ ha-card[data-compact="true"] .discard::part(base),.status-more::part(base){box-s
         this._view.getBoundingClientRect(),
         this._view.querySelector("summary").getBoundingClientRect(),
         { width: window.innerWidth, height: window.innerHeight },
-        Math.min(16, this._layout?.padding || 16)
+        Math.min(16, this._layout?.padding || 16),
+        !!this._layout?.short
       );
       if (!bounds) return false;
       const list = this._view.querySelector(".list");
@@ -364,6 +416,7 @@ ha-card[data-compact="true"] .discard::part(base),.status-more::part(base){box-s
         this.config.show_speaker_selection !== false
       );
       this._view.dataset.compact = String(initial.compact);
+      this._view.dataset.short = String(!!initial.short);
       this._view.dataset.narrow = String(width < 200);
       const measure = this._view.querySelector("canvas").getContext("2d");
       measure.font = (width < 200 ? "12px " : "14px ") + getComputedStyle(this).fontFamily;

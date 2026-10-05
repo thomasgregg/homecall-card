@@ -1,5 +1,14 @@
 # Changelog
 
+## 1.1.1
+
+- Support a 6-column × 1-row card with a 56px minimum height.
+- Center the action, discard, and speaker icons vertically in one-row cards.
+- Center countdown digits beneath the speaker, or at middle height when the picker is hidden; keep the recording dot clear of the waveform.
+- Open speaker selection outside short cards while keeping taller layouts unchanged.
+- Reuse native icons, controls, fonts, colors, and countdown behavior.
+- Document sizing in the README and add Chromium/WebKit layout regressions.
+
 ## 1.1.0
 
 - Count down from 1:00 and fill the recording ring clockwise toward the 60-second limit.

@@ -71,7 +71,7 @@ At **0:00**, recording stops automatically and the button switches to a smaller 
 | `type`                   | string       | Required                                 | `custom:homecall-card`                                                                                        |
 | `show_speaker_selection` | boolean      | `true`                                   | Show the recipient picker                                                                                     |
 | `default_targets`        | string array | All available speakers shown in the card | Initial selection, using Alexa `notify.*_speak` or tested DLNA `media_player.*` entity IDs; `[]` selects none |
-| `grid_options`           | object       | 12 columns × 5 rows                      | Standard Home Assistant sections sizing                                                                       |
+| `grid_options`           | object       | 6 columns × 1 row                        | Standard Home Assistant sections sizing                                                                       |
 
 ```yaml
 type: custom:homecall-card
@@ -81,12 +81,20 @@ default_targets:
   - notify.living_room_speak
 grid_options:
   columns: 6
-  rows: 3
+  rows: 1
 ```
 
 Defaults never bypass the integration's allowlist. Hiding the picker also hides the ability to change rooms in the card, so verify the default targets before hiding it.
 
-The action size depends on width, height, recipient controls, and footer clearance. Hiding the picker can make it larger, but the increase may be subtle in a small card. Icon-only layouts retain equal top and bottom gaps. The minimum supported card height is 184px.
+### Card sizing
+
+In a **Sections** dashboard, HomeCall defaults to **6 columns × 1 row** (half a section wide). The minimum supported height is **56px**. Set the size in the card editor's **Layout** tab, or use `grid_options` as above. Existing cards keep their saved dimensions until you resize them.
+
+At **1 row**, the microphone, discard icon, and speaker icon sit at the card's middle height. The countdown digits are centered below the speaker; when the speaker picker is hidden, the countdown and recording dot move to middle height. The waveform leaves space around the side controls. Speaker selection and longer status messages open in popovers outside the short card.
+
+At **2 rows or more**, the card retains its taller layout, with the picker above and recording controls below. The main action scales to the available space; captions appear when there is enough room. These layouts use the same Home Assistant icons, fonts, controls, and theme colors.
+
+Columns control width and rows control height. For example, use `columns: 12` and `rows: 3` for a larger card. Actual width depends on the dashboard and screen size. Masonry dashboards do not use `grid_options`; use a Sections view for the explicit 6 × 1 layout.
 
 ## Documentation
 

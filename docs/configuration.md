@@ -8,18 +8,19 @@ A missing `default_targets` selects all allowed available devices. An explicit e
 
 ## Sections sizing
 
-Use standard `grid_options`; the default is 12 columns by 5 rows, with a minimum suggested 6 columns by 3 rows. The card's own minimum height is 184px. Widths and heights vary with the section and viewport; grid dimensions do not guarantee a fixed pixel size.
+Use standard `grid_options`; the default and minimum suggested size is 6 columns by 1 row. The card's own minimum height is 56px. Widths and heights vary with the section and viewport; grid dimensions do not guarantee a fixed pixel size.
 
 ```yaml
 type: custom:homecall-card
 grid_options:
-  columns: 12
-  rows: 5
+  columns: 6
+  rows: 1
 ```
 
 ## Layout rules
 
-- The action diameter stays within 52–240px and scales with available width and height.
+- Cards below 120px high use a horizontal layout: the action, discard, and speaker icons share the vertical centerline, with the timer below the speaker. The action is up to 36px across; the waveform stays between the side controls. Speaker selection opens in a viewport-bounded popover outside the card. Existing native icons, controls, theme colors, fonts, and countdown behavior are reused.
+- Taller cards keep the existing layout. Their action diameter stays within 52–240px and scales with available width and height.
 - With a picker, the action clears the selector's upper corner.
 - With no picker and no caption, the action stays vertically centered.
 - A caption appears only when the center footer slot has enough room. With no picker and a visible caption, the action may move upward to use available space.
