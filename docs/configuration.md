@@ -30,14 +30,14 @@ grid_options:
 
 ## Recording states
 
-| State     | Visible action                     | Behavior                                         |
-| --------- | ---------------------------------- | ------------------------------------------------ |
-| Ready     | Blue microphone                    | Starts capture                                   |
-| Starting  | Blue; progress appears after 300ms | Requests input permission and device status      |
-| Recording | Red send icon, waveform and dot    | Captures up to 60 seconds; tap to send           |
-| Recorded  | Blue send icon                     | At the limit, audio waits for explicit send      |
-| Sending   | Busy action                        | Uploads audio and awaits acceptance              |
-| Sent      | Confirmation                       | Full acceptance returns to ready after 5 seconds |
-| Error     | Retry                              | Detailed status explains the failure             |
+| State     | Visible action                            | Behavior                                         |
+| --------- | ----------------------------------------- | ------------------------------------------------ |
+| Ready     | Blue microphone                           | Starts capture                                   |
+| Starting  | Microphone; preparation label after 300ms | Requests input permission and device status      |
+| Recording | Red send icon, waveform and dot           | Captures up to 60 seconds; tap to send           |
+| Recorded  | Blue send icon                            | At the limit, audio waits for explicit send      |
+| Sending   | Busy action                               | Uploads audio and awaits acceptance              |
+| Sent      | Confirmation                              | Full acceptance returns to ready after 5 seconds |
+| Error     | Retry                                     | Detailed status explains the failure             |
 
 Discard invalidates the current session, stops tracks, disconnects the audio processor, closes the audio context, clears buffers, and preserves recipient controls. Late microphone and HTTP callbacks cannot update a discarded recording.

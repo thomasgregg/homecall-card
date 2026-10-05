@@ -81,12 +81,12 @@ At **0:00**, recording stops automatically and the button switches to a smaller 
 
 ## Configuration
 
-| Option                   | Type         | Default                                  | Meaning                                                                                                       |
-| ------------------------ | ------------ | ---------------------------------------- | ------------------------------------------------------------------------------------------------------------- |
-| `type`                   | string       | Required                                 | `custom:homecall-card`                                                                                        |
-| `show_speaker_selection` | boolean      | `true`                                   | Show the recipient picker                                                                                     |
-| `default_targets`        | string array | All available speakers shown in the card | Initial selection, using Alexa `notify.*_speak` or tested DLNA `media_player.*` entity IDs; `[]` selects none |
-| `grid_options`           | object       | 6 columns × 1 row                        | Standard Home Assistant sections sizing                                                                       |
+| Option                   | Type         | Default                                  | Meaning                                                                                                                                                                    |
+| ------------------------ | ------------ | ---------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `type`                   | string       | Required                                 | `custom:homecall-card`                                                                                                                                                     |
+| `show_speaker_selection` | boolean      | `true`                                   | Show the recipient picker                                                                                                                                                  |
+| `default_targets`        | string array | All available speakers shown in the card | Initial selection, using allowed Alexa `notify.*_speak` or configured DLNA, Sonos, Music Assistant, Google Cast or EchoMuse `media_player.*` entity IDs; `[]` selects none |
+| `grid_options`           | object       | 6 columns × 1 row                        | Standard Home Assistant sections sizing                                                                                                                                    |
 
 ```yaml
 type: custom:homecall-card
@@ -133,6 +133,6 @@ npm run test:browser
 npm run format:check
 ```
 
-The browser suite tests the built card in Chromium and WebKit with stand-ins for native Home Assistant controls. It checks mounted configuration toggles, centering, border insets, halo clearance, and stable geometry across recording phases. These tests complement a real Home Assistant visual check; they do not emulate Alexa playback or validate every native frontend revision.
+The browser suite tests the built card in Chromium and WebKit with stand-ins for native Home Assistant controls. It checks mounted configuration toggles, centering, border insets, halo clearance, and stable geometry across recording phases. These tests complement a real Home Assistant visual check; they do not emulate speaker playback or validate every native frontend revision.
 
 Licensed under [MIT](LICENSE). Built and maintained by [Thomas Gregg](https://github.com/thomasgregg).
