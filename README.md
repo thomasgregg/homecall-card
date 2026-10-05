@@ -6,11 +6,11 @@
 <a href="https://hacs.xyz"><img src="https://img.shields.io/badge/HACS-custom_repository-41BDF5" alt="HACS custom repository"></a>
 </p>
 
-**A focused recording card for original-voice announcements to your Echo speakers.**
+**A focused recording card for original-voice announcements to your speakers.**
 
 Tap to record. Choose the rooms. Tap to send. HomeCall Card gives Home Assistant a responsive microphone interface with a waveform, recording timer, recipient picker, and clear delivery feedback. It requires the separate [HomeCall integration](https://github.com/thomasgregg/homecall).
 
-**Currently, HomeCall supports Alexa/Echo speakers only.** I’m happy to expand support to other speakers and welcome ideas and contributions. [Open an issue](https://github.com/thomasgregg/homecall/issues) to discuss a speaker platform you’d like to help support.
+**HomeCall supports Alexa/Echo and compatible DLNA speakers.** Alexa works through its existing integration; DLNA speakers are added after a short sound test. JBL Charge 5 Wi-Fi has passed a basic MP3 playback test. Other DLNA devices need their own test; Optional per-speaker music restoration can restart the interrupted track and seek where supported; playlists and streaming sessions are not guaranteed. I’m happy to expand support to other speakers and welcome ideas and contributions. [Open an issue](https://github.com/thomasgregg/homecall/issues) to discuss a speaker platform you’d like to help support.
 
 ## Contents
 
@@ -66,12 +66,12 @@ Recording stops at 60 seconds and waits for you to send. After a fully accepted 
 
 ## Configuration
 
-| Option                   | Type         | Default                       | Meaning                                                                 |
-| ------------------------ | ------------ | ----------------------------- | ----------------------------------------------------------------------- |
-| `type`                   | string       | Required                      | `custom:homecall-card`                                                  |
-| `show_speaker_selection` | boolean      | `true`                        | Show the recipient picker                                               |
-| `default_targets`        | string array | All available allowed devices | Initial selection, using `notify.*_speak` entity IDs; `[]` selects none |
-| `grid_options`           | object       | 12 columns × 5 rows           | Standard Home Assistant sections sizing                                 |
+| Option                   | Type         | Default                                  | Meaning                                                                                                       |
+| ------------------------ | ------------ | ---------------------------------------- | ------------------------------------------------------------------------------------------------------------- |
+| `type`                   | string       | Required                                 | `custom:homecall-card`                                                                                        |
+| `show_speaker_selection` | boolean      | `true`                                   | Show the recipient picker                                                                                     |
+| `default_targets`        | string array | All available speakers shown in the card | Initial selection, using Alexa `notify.*_speak` or tested DLNA `media_player.*` entity IDs; `[]` selects none |
+| `grid_options`           | object       | 12 columns × 5 rows                      | Standard Home Assistant sections sizing                                                                       |
 
 ```yaml
 type: custom:homecall-card

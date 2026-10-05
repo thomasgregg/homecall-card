@@ -24,10 +24,13 @@ export function homeCallLayout(
     borderX: 1,
     borderY: 1,
   };
+  const narrow = width < 200;
+  const discardHeight = narrow ? 32 : 44;
+  const timerHeight = narrow ? 24 : 32;
   const footerDistance = Math.min(
     ...[
-      [footer.discard, 44],
-      [footer.time, 32],
+      [footer.discard, discardHeight],
+      [footer.time, timerHeight],
     ].map(([w, bottom]) =>
       Math.hypot(
         Math.max(0, width / 2 - padding - (footer.borderX ?? 1) - w),
@@ -50,7 +53,7 @@ export function homeCallLayout(
   const edgeFooter = !hasSelector && !showLabel && compact;
   const footerPadding = edgeFooter ? 8 : padding;
   const controlWidths = {
-    discard: footer.discard,
+    discard: narrow ? 32 : footer.discard,
     time: footer.time - (edgeFooter ? 13 : 0),
   };
   const labelLimit = showLabel
@@ -76,7 +79,13 @@ export function homeCallLayout(
     const borderY = footer.borderY ?? 1,
       clearance = showLabel ? 8.5 : 8; // Keep 8px after subpixel rounding.
     const maximum = Math.floor(
-      Math.min(240, width * 0.56, (height - 2 * padding - 2 * borderY) / 1.18),
+      Math.min(
+        // Preserve the accepted 97px small-card action rather than inventing
+        // another diameter when compact footer controls free extra space.
+        narrow ? 97 : 240,
+        width * 0.56,
+        (height - 2 * padding - 2 * borderY) / 1.18,
+      ),
     );
     for (let candidate = maximum; candidate >= 52; candidate--) {
       const radius = candidate * 0.59,
@@ -88,8 +97,8 @@ export function homeCallLayout(
           height - padding - borderY - 32 - clearance - radius,
         );
       for (const [controlWidth, controlHeight] of [
-        [controlWidths.discard, 44],
-        [controlWidths.time, 32],
+        [controlWidths.discard, discardHeight],
+        [controlWidths.time, timerHeight],
       ]) {
         const distanceX = Math.max(
           0,

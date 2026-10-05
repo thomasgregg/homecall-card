@@ -16,10 +16,14 @@ Use HTTPS, allow microphone access for this HA origin, check the OS input device
 
 ## No speakers or send rejected
 
-Check the integration's device allowlist and available Alexa speak entities. A custom default target cannot bypass that allowlist. An empty explicit target list leaves the action unavailable until speakers are selected.
+Check the integration’s speaker selection and available Alexa or tested DLNA entities. A custom default target cannot bypass that allowlist. An empty explicit target list leaves the action unavailable until speakers are selected.
 
 ## Alexa accepted but audio did not play
 
 Read [integration troubleshooting](https://github.com/thomasgregg/homecall/blob/main/docs/troubleshooting.md). The card reports request acceptance and audio retrieval, not acoustic playback.
 
 For an issue, provide HA/card version, browser/OS, card YAML with private entity names removed, card dimensions, whether the picker is visible, and reproduction steps. Avoid including recorded speech or receipt tokens.
+
+## DLNA playback
+
+Add the speaker in HomeCall settings through a successful sound test first. Check **Show in the card** and its HA availability. The card does not directly control media players or fall back to Cast. Connection and test failures are handled in the integration’s DLNA settings. Playback replaces current media. Optional Resume music after announcements is configured per speaker in the integration, not in the card.

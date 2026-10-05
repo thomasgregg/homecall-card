@@ -4,7 +4,13 @@ const script = await readFile(
   new URL("../../homecall-card.js", import.meta.url),
   "utf8",
 );
-async function fixture(page, width = 215, height = 184, liveStatus = false) {
+async function fixture(
+  page,
+  width = 215,
+  height = 184,
+  liveStatus = false,
+  recipient = "notify.kitchen_speak",
+) {
   await page.setContent(
     `<style>body{--primary-color:#009ac0;--primary-text-color:#222;--secondary-text-color:#666;--ha-font-size-m:14px;--ha-border-radius-md:8px;--ha-border-radius-lg:12px;font-family:Arial}homecall-card{display:block;width:${width}px;height:${height}px}</style><button id="toggle">Toggle picker and save</button><main></main>`,
   );
@@ -41,44 +47,47 @@ async function fixture(page, width = 215, height = 184, liveStatus = false) {
     customElements.define("ha-form", class extends HTMLElement {});
   });
   await page.addScriptTag({ content: script });
-  await page.evaluate((liveStatus) => {
-    const c = document.createElement("homecall-card");
-    if (!liveStatus)
-      c._load = function () {
-        this._phase = "ready";
-        this._selection = ["notify.kitchen_speak"];
-        this._button("Aufnehmen");
-      };
-    c._hass = { locale: { language: "en" } };
-    if (liveStatus) {
-      window.statusRequests = 0;
-      window.echoOnline = false;
-      c._hass.states = { "notify.kitchen_speak": { state: "unavailable" } };
-      c._hass.fetchWithAuth = async () => {
-        window.statusRequests++;
-        return {
-          ok: true,
-          json: async () => ({
-            default_targets: [],
-            targets: [
-              {
-                entity_id: "notify.kitchen_speak",
-                name: "Kitchen",
-                available: window.echoOnline,
-              },
-            ],
-          }),
+  await page.evaluate(
+    ({ liveStatus, recipient }) => {
+      const c = document.createElement("homecall-card");
+      if (!liveStatus)
+        c._load = function () {
+          this._phase = "ready";
+          this._selection = [recipient];
+          this._button("Aufnehmen");
         };
-      };
-    }
-    c._lang = "en";
-    c.config = { show_speaker_selection: false };
-    document.querySelector("main").append(c);
-    document.querySelector("#toggle").onclick = () =>
-      c.setConfig({
-        show_speaker_selection: c.config.show_speaker_selection === false,
-      });
-  }, liveStatus);
+      c._hass = { locale: { language: "en" } };
+      if (liveStatus) {
+        window.statusRequests = 0;
+        window.echoOnline = false;
+        c._hass.states = { [recipient]: { state: "unavailable" } };
+        c._hass.fetchWithAuth = async () => {
+          window.statusRequests++;
+          return {
+            ok: true,
+            json: async () => ({
+              default_targets: [],
+              targets: [
+                {
+                  entity_id: recipient,
+                  name: "Kitchen",
+                  available: window.echoOnline,
+                },
+              ],
+            }),
+          };
+        };
+      }
+      c._lang = "en";
+      c.config = { show_speaker_selection: false };
+      document.querySelector("main").append(c);
+      document.querySelector("#toggle").onclick = () =>
+        c.setConfig({
+          show_speaker_selection: c.config.show_speaker_selection === false,
+        });
+    },
+    { liveStatus, recipient },
+  );
   await expect(page.locator("homecall-card .main")).toBeVisible();
 }
 test("an offline Echo recovers from HA updates without a dashboard reload", async ({
@@ -179,7 +188,7 @@ async function geometry(page) {
     };
   });
 }
-for (const width of [174, 215, 231]) {
+for (const width of [174, 177.5, 215, 231]) {
   test(`saved selector cycles restore mounted size at ${width}×184`, async ({
     page,
   }) => {
@@ -196,9 +205,15 @@ for (const width of [174, 215, 231]) {
       expect(on.size).toBeLessThanOrEqual(off.size);
       if (width >= 215) expect(on.size).toBeLessThan(off.size);
     }
+    await page.locator("homecall-card").evaluate((c) => {
+      c.hass = { ...c._hass, locale: { language: "de" } };
+      c.hass = { ...c._hass, locale: { language: "en" } };
+    });
+    await expect.poll(async () => (await geometry(page)).size).toBe(off.size);
   });
 }
 for (const [width, height] of [
+  [177.5, 184],
   [174, 184],
   [184, 184],
   [215, 184],
@@ -211,6 +226,7 @@ for (const [width, height] of [
   }) => {
     await fixture(page, width, height);
     const idle = await geometry(page);
+    if (width === 177.5) expect(idle.size).toBe(97);
     for (const phase of [
       "starting",
       "recording",
@@ -240,3 +256,24 @@ for (const [width, height] of [
     }
   });
 }
+
+test("an offline DLNA speaker recovers when HA reports idle", async ({
+  page,
+}) => {
+  await fixture(page, 246, 184, true, "media_player.jbl");
+  await expect(page.locator("homecall-card .main")).toHaveAttribute(
+    "aria-label",
+    "Retry",
+  );
+  await page.locator("homecall-card").evaluate((c) => {
+    window.echoOnline = true;
+    c.hass = { ...c._hass, states: { "media_player.jbl": { state: "idle" } } };
+  });
+  await expect(page.locator("homecall-card .main")).toHaveAttribute(
+    "aria-label",
+    "Record",
+  );
+  expect(
+    await page.locator("homecall-card").evaluate((c) => c._selection),
+  ).toEqual(["media_player.jbl"]);
+});

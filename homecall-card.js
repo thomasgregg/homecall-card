@@ -13,10 +13,13 @@
       borderX: 1,
       borderY: 1
     };
+    const narrow = width < 200;
+    const discardHeight = narrow ? 32 : 44;
+    const timerHeight = narrow ? 24 : 32;
     const footerDistance = Math.min(
       ...[
-        [footer.discard, 44],
-        [footer.time, 32]
+        [footer.discard, discardHeight],
+        [footer.time, timerHeight]
       ].map(
         ([w, bottom]) => Math.hypot(
           Math.max(0, width / 2 - padding - (footer.borderX ?? 1) - w),
@@ -33,7 +36,7 @@
     const edgeFooter = !hasSelector && !showLabel && compact;
     const footerPadding = edgeFooter ? 8 : padding;
     const controlWidths = {
-      discard: footer.discard,
+      discard: narrow ? 32 : footer.discard,
       time: footer.time - (edgeFooter ? 13 : 0)
     };
     const labelLimit = showLabel ? (height / 2 - padding - (footer.borderY ?? 1) - 32 - 8) / 0.59 : Infinity;
@@ -54,7 +57,13 @@
     if (!hasSelector) {
       const borderY = footer.borderY ?? 1, clearance = showLabel ? 8.5 : 8;
       const maximum = Math.floor(
-        Math.min(240, width * 0.56, (height - 2 * padding - 2 * borderY) / 1.18)
+        Math.min(
+          // Preserve the accepted 97px small-card action rather than inventing
+          // another diameter when compact footer controls free extra space.
+          narrow ? 97 : 240,
+          width * 0.56,
+          (height - 2 * padding - 2 * borderY) / 1.18
+        )
       );
       for (let candidate = maximum; candidate >= 52; candidate--) {
         const radius = candidate * 0.59, minimumY = padding + borderY + radius;
@@ -65,8 +74,8 @@
             height - padding - borderY - 32 - clearance - radius
           );
         for (const [controlWidth, controlHeight] of [
-          [controlWidths.discard, 44],
-          [controlWidths.time, 32]
+          [controlWidths.discard, discardHeight],
+          [controlWidths.time, timerHeight]
         ]) {
           const distanceX = Math.max(
             0,
@@ -128,9 +137,9 @@
   }
   var HOMECALL_EN = {
     Verwerfen: "Discard",
-    "Alle Echos": "All Echos",
-    "1 Echo": "1 Echo",
-    "{count} Echos": "{count} Echos",
+    "Alle Lautsprecher": "All speakers",
+    "1 Lautsprecher": "1 speaker",
+    "{count} Lautsprecher": "{count} speakers",
     "Neue Durchsage": "New announcement",
     "Erneut versuchen": "Retry",
     "Tippe auf das Mikrofon": "Tap the microphone",
@@ -140,10 +149,10 @@
     "HomeCall \xF6ffnen": "Open HomeCall",
     "Deine Stimme zu Hause": "Your voice at home",
     Durchsage: "Announcement",
-    "An alle Echos": "To all Echos",
-    "An {count} Echos": "To {count} Echos",
-    "An 1 Echo": "To 1 Echo",
-    "Kein Echo ausgew\xE4hlt": "No Echo selected",
+    "An alle Lautsprecher": "To all speakers",
+    "An {count} Lautsprecher": "To {count} speakers",
+    "An 1 Lautsprecher": "To 1 speaker",
+    "Kein Lautsprecher ausgew\xE4hlt": "No speaker selected",
     "Alle ausw\xE4hlen": "Select all",
     Bereit: "Ready",
     Aufnehmen: "Record",
@@ -154,24 +163,24 @@
     "Mikrofon wird vorbereitet \u2026": "Preparing microphone \u2026",
     "Sprich jetzt": "Speak now",
     "Wird gesendet": "Sending",
-    "Deine Nachricht wird f\xFCr Alexa vorbereitet \u2026": "Preparing your message for Alexa \u2026",
+    "Deine Nachricht wird vorbereitet \u2026": "Preparing your message \u2026",
     "HomeCall ist noch nicht bereit.": "HomeCall is not ready yet.",
     "HomeCall ist noch nicht eingerichtet.": "HomeCall is not configured yet.",
     "Das Mikrofon ben\xF6tigt HTTPS. Bitte eine sichere HA-Adresse verwenden.": "The microphone requires HTTPS. Open HA using a secure address.",
     "Bitte den Mikrofonzugriff f\xFCr Home Assistant erlauben.": "Please allow microphone access for Home Assistant.",
     "Mikrofon konnte nicht gestartet werden.": "Could not start the microphone.",
-    "Kein Echo ist gerade erreichbar.": "No Echo is available right now.",
+    "Kein Lautsprecher ist gerade erreichbar.": "No speaker is available right now.",
     "Die Aufnahme war zu kurz. Bitte erneut aufnehmen.": "The recording was too short. Please record again.",
-    "Bitte mindestens einen Echo ausw\xE4hlen.": "Please select at least one Echo.",
+    "Bitte mindestens einen Lautsprecher ausw\xE4hlen.": "Please select at least one speaker.",
     "Die Durchsage konnte nicht gesendet werden.": "Could not send the announcement.",
-    "Alexa hat die Durchsage nicht angenommen.": "Alexa did not accept the announcement.",
+    "Die Lautsprecher haben die Durchsage nicht angenommen.": "The speakers did not accept the announcement.",
     "Die Durchsage ist fehlgeschlagen.": "The announcement failed.",
-    "Deine Sprachnachricht wurde von Alexa abgerufen.": "Alexa retrieved your voice message.",
-    "An Alexa gesendet. Der Audioabruf ist noch nicht best\xE4tigt.": "Sent to Alexa. Audio retrieval has not been confirmed yet.",
-    "An {count} Echos gesendet.": "Sent to {count} Echos.",
+    "Deine Sprachnachricht wurde abgerufen.": "Your voice message was retrieved.",
+    "An die Lautsprecher gesendet. Der Audioabruf ist noch nicht best\xE4tigt.": "Sent to the speakers. Audio retrieval has not been confirmed yet.",
+    "An {count} Lautsprecher gesendet.": "Sent to {count} speakers.",
     "Einige Ger\xE4te konnten nicht erreicht werden.": "Some devices could not be reached.",
     "Eine Durchsage wird gerade gesendet.": "An announcement is already being sent.",
-    "Bitte erreichbare Echos ausw\xE4hlen.": "Please select available Echos.",
+    "Bitte erreichbare Lautsprecher ausw\xE4hlen.": "Please select available speakers.",
     "Aufnahme ist zu gro\xDF.": "The recording is too large.",
     "Ung\xFCltige Aufnahme. Bitte 1 bis 60 Sekunden sprechen.": "Invalid recording. Please speak for 1 to 60 seconds.",
     "Audio konnte nicht umgewandelt werden.": "Could not convert the audio.",
@@ -203,7 +212,12 @@
     }
     _availabilityState() {
       return JSON.stringify(
-        Object.entries(this._hass?.states || {}).filter(([id]) => id.startsWith("notify.") && id.endsWith("_speak")).map(([id, state]) => [id, state.state !== "unavailable"]).sort(([a], [b]) => a.localeCompare(b))
+        Object.entries(this._hass?.states || {}).filter(
+          ([id]) => id.startsWith("notify.") && id.endsWith("_speak") || id.startsWith("media_player.")
+        ).map(([id, state]) => [
+          id,
+          state.state !== "unavailable" && (!id.startsWith("media_player.") || state.state !== "unknown")
+        ]).sort(([a], [b]) => a.localeCompare(b))
       );
     }
     _retryAvailability() {
@@ -253,6 +267,7 @@ ha-card[data-tone="red"]{--homecall-tone:var(--ha-color-fill-danger-loud-resting
 .action{display:flex;position:absolute;inset:0;pointer-events:none;flex-direction:column;align-items:center;justify-content:center}.visual{transform:translateY(var(--homecall-action-offset,0px));position:relative;display:flex;align-items:center;justify-content:center;width:calc(100% - 2*var(--homecall-padding));height:var(--homecall-visual-height,calc(var(--homecall-button-size)*1.44));max-height:calc(100% - 2*var(--homecall-padding));flex:none;isolation:isolate}.halo{position:absolute;width:calc(var(--homecall-button-size)*1.18);height:calc(var(--homecall-button-size)*1.18);border-radius:50%;background:var(--homecall-tone);opacity:.18;pointer-events:none;z-index:-1}.wave{position:absolute;inset:0;width:100%;height:100%;opacity:0;pointer-events:none;z-index:-2}.recording .wave,ha-card[data-phase="recorded"] .wave{opacity:.24}
 .main{pointer-events:auto;--ha-button-height:var(--homecall-button-size);--ha-button-border-radius:50%;--ha-button-box-shadow:none;flex:none}.main::part(base){width:var(--homecall-button-size);padding:0}.main::part(label){display:flex;align-items:center;justify-content:center}.main::part(spinner){font-size:var(--homecall-icon-size)}.main ha-icon{--mdc-icon-size:var(--homecall-icon-size)}.action-label{position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);font-size:var(--ha-font-size-m);font-weight:var(--ha-font-weight-medium);line-height:20px;max-width:var(--homecall-label-space);text-align:center;color:var(--primary-text-color);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;flex:none}
 ha-card[data-edge-footer="true"] .info{bottom:8px;inset-inline:8px}ha-card[data-edge-footer="true"] .time{padding-inline-end:0}
+ha-card[data-narrow="true"] .info{height:32px;min-height:32px;align-items:flex-end}ha-card[data-narrow="true"] .discard{--ha-button-height:32px}ha-card[data-narrow="true"] .discard::part(base){min-width:32px;padding:0 5px}ha-card[data-narrow="true"] .time{font-size:12px;line-height:24px;gap:6px}
 .info{display:flex;position:absolute;bottom:var(--homecall-padding);inset-inline:var(--homecall-padding);pointer-events:none;align-items:center;justify-content:space-between;gap:8px;height:44px;min-height:44px;flex:none;color:var(--secondary-text-color);font-size:var(--ha-font-size-m);line-height:20px}.discard{pointer-events:auto;--ha-button-height:44px;--ha-button-border-radius:var(--homecall-control-radius);--ha-button-box-shadow:none;flex:none}.discard::part(base){padding:0 12px;min-width:44px}.discard::part(label){display:flex;align-items:center;gap:8px;font-size:var(--ha-font-size-m);font-weight:400;line-height:20px}.discard ha-icon{--mdc-icon-size:20px}.message-control{display:flex;align-items:center;justify-content:center;min-width:0;gap:4px}.status{line-height:20px;overflow:hidden;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow-wrap:anywhere}.status-more{pointer-events:auto;flex:none;color:var(--secondary-text-color)}ha-card[data-phase="error"] .status-more{color:var(--error-color)}ha-card[data-phase="sent"] .status-more{color:var(--success-color)}.time{display:flex;align-items:center;gap:8px;margin-inline-start:auto;padding-inline-end:var(--homecall-content-inset);white-space:nowrap;font-variant-numeric:tabular-nums}.recording .time:before{content:'';display:block;width:8px;height:8px;flex:none;border-radius:50%;background:var(--ha-color-fill-danger-loud-resting,var(--error-color))}
 .sr-only{position:absolute!important;width:1px!important;height:1px!important;padding:0!important;margin:-1px!important;overflow:hidden!important;clip:rect(0,0,0,0)!important;white-space:nowrap!important;border:0!important}
 ha-card[data-compact="true"] .targets summary{justify-content:center;margin-inline-end:calc(var(--homecall-content-inset) - 11px);padding-inline:0}ha-card[data-compact="true"] .targets summary span,ha-card[data-compact="true"] .targets .chevron{display:none}ha-card[data-compact="true"] .targets .speaker-icon{display:block;--mdc-icon-size:22px}ha-card[data-compact="true"] .discard .discard-label{display:none}ha-card[data-compact="true"] .message-control{gap:0}
@@ -342,12 +357,13 @@ ha-card[data-compact="true"] .targets summary{justify-content:center;margin-inli
         this.config.show_speaker_selection !== false
       );
       this._view.dataset.compact = String(initial.compact);
+      this._view.dataset.narrow = String(width < 200);
       const measure = this._view.querySelector("canvas").getContext("2d");
-      measure.font = "14px " + getComputedStyle(this).fontFamily;
+      measure.font = (width < 200 ? "12px " : "14px ") + getComputedStyle(this).fontFamily;
       const border = getComputedStyle(this._view);
       const footerWidths = {
         discard: initial.compact ? 46 : Math.ceil(measure.measureText(this._t("Verwerfen")).width) + 54,
-        time: Math.ceil(measure.measureText("00:00").width) + 29,
+        time: Math.ceil(measure.measureText("00:00").width) + (width < 200 ? 21 : 29),
         borderX: Math.max(
           parseFloat(border.borderLeftWidth) || 0,
           parseFloat(border.borderRightWidth) || 0
@@ -482,15 +498,18 @@ ha-card[data-compact="true"] .targets summary{justify-content:center;margin-inli
       } catch (error) {
         if (session !== this._session) return;
         this._phase = "error";
-        const message = error.message === "Kein Echo ist gerade erreichbar." ? error.message : "Ger\xE4te konnten nicht geladen werden.";
-        this._availabilityError = error.message === "Kein Echo ist gerade erreichbar.";
+        const message = error.message === "Kein Lautsprecher ist gerade erreichbar." ? error.message : "Ger\xE4te konnten nicht geladen werden.";
+        this._availabilityError = error.message === "Kein Lautsprecher ist gerade erreichbar.";
         this._availabilitySnapshot = this._availabilityState();
         const summary2 = this._view.querySelector("summary");
         summary2.querySelector("span").textContent = this._t(
-          "Kein Echo ausgew\xE4hlt"
+          "Kein Lautsprecher ausgew\xE4hlt"
         );
-        summary2.setAttribute("aria-label", this._t("Kein Echo ausgew\xE4hlt"));
-        summary2.title = this._t("Kein Echo ausgew\xE4hlt");
+        summary2.setAttribute(
+          "aria-label",
+          this._t("Kein Lautsprecher ausgew\xE4hlt")
+        );
+        summary2.title = this._t("Kein Lautsprecher ausgew\xE4hlt");
         this._view.querySelector(".list").textContent = this._t(message);
         this._setStatus(message);
         this._doneButton();
@@ -518,7 +537,7 @@ ha-card[data-compact="true"] .targets summary{justify-content:center;margin-inli
       this._phase = "ready";
       this._button("Aufnehmen");
       this._setStatus(
-        this._selection.length ? "Tippe auf das Mikrofon" : "Bitte mindestens einen Echo ausw\xE4hlen."
+        this._selection.length ? "Tippe auf das Mikrofon" : "Bitte mindestens einen Lautsprecher ausw\xE4hlen."
       );
       this._view.querySelector(".main").disabled = !this._selection.length;
       this._draw();
@@ -587,7 +606,7 @@ ha-card[data-compact="true"] .targets summary{justify-content:center;margin-inli
         this._defaultsAll = false;
         this._fillTargets(data.targets);
         if (!this._selection.length)
-          throw new Error("Kein Echo ist gerade erreichbar.");
+          throw new Error("Kein Lautsprecher ist gerade erreichbar.");
         const source = this._context.createMediaStreamSource(stream);
         this._source = source;
         this._processor = this._context.createScriptProcessor(4096, 1, 1);
@@ -637,7 +656,7 @@ ha-card[data-compact="true"] .targets summary{justify-content:center;margin-inli
     _fillTargets(targets) {
       this._targets = targets;
       if (!targets.some((t) => t.available))
-        throw new Error("Kein Echo ist gerade erreichbar.");
+        throw new Error("Kein Lautsprecher ist gerade erreichbar.");
       this._selection = targets.filter(
         (t) => t.available && (this._defaultsAll || this._defaults.includes(t.entity_id))
       ).map((t) => t.entity_id);
@@ -683,14 +702,14 @@ ha-card[data-compact="true"] .targets summary{justify-content:center;margin-inli
       const available = this._targets.filter((t) => t.available), count = this._selection.length, all = this._view.querySelector(".select-all");
       all.checked = count === available.length;
       all.indeterminate = count > 0 && count < available.length;
-      const text = count === 0 ? "Kein Echo ausgew\xE4hlt" : count === 1 ? "1 Echo" : count === available.length ? "Alle Echos" : "{count} Echos";
+      const text = count === 0 ? "Kein Lautsprecher ausgew\xE4hlt" : count === 1 ? "1 Lautsprecher" : count === available.length ? "Alle Lautsprecher" : "{count} Lautsprecher";
       const summary = this._view.querySelector("summary");
       summary.querySelector("span").textContent = this._t(text, { count });
       summary.setAttribute("aria-label", this._t(text, { count }));
       summary.title = this._t(text, { count });
       if (this._phase === "ready")
         this._setStatus(
-          count ? "Tippe auf das Mikrofon" : "Bitte mindestens einen Echo ausw\xE4hlen."
+          count ? "Tippe auf das Mikrofon" : "Bitte mindestens einen Lautsprecher ausw\xE4hlen."
         );
       if (["ready", "recording", "recorded"].includes(this._phase))
         this._view.querySelector(".main").disabled = count === 0;
@@ -817,12 +836,12 @@ ha-card[data-compact="true"] .targets summary{justify-content:center;margin-inli
       const targets = [...this._selection];
       this._button("Wird gesendet", "volume-high");
       this._view.querySelector(".main").disabled = true;
-      this._setStatus("Deine Nachricht wird f\xFCr Alexa vorbereitet \u2026");
+      this._setStatus("Deine Nachricht wird vorbereitet \u2026");
       try {
         if (this._samples / this._sampleRate < 0.2)
           throw new Error("Die Aufnahme war zu kurz. Bitte erneut aufnehmen.");
         if (!targets.length)
-          throw new Error("Bitte mindestens einen Echo ausw\xE4hlen.");
+          throw new Error("Bitte mindestens einen Lautsprecher ausw\xE4hlen.");
         const query = new URLSearchParams();
         targets.forEach((t) => query.append("target", t));
         const response = await this._hass.fetchWithAuth(
@@ -841,10 +860,13 @@ ha-card[data-compact="true"] .targets summary{justify-content:center;margin-inli
             data.error || "Die Durchsage konnte nicht gesendet werden."
           );
         const sent = data.results.filter((r) => r.accepted).length;
-        if (!sent) throw new Error("Alexa hat die Durchsage nicht angenommen.");
+        if (!sent)
+          throw new Error(
+            "Die Lautsprecher haben die Durchsage nicht angenommen."
+          );
         this._phase = "sent";
         this._setStatus(
-          this._t("An {count} Echos gesendet.", { count: sent }) + (sent < targets.length ? " " + this._t("Einige Ger\xE4te konnten nicht erreicht werden.") : "")
+          this._t("An {count} Lautsprecher gesendet.", { count: sent }) + (sent < targets.length ? " " + this._t("Einige Ger\xE4te konnten nicht erreicht werden.") : "")
         );
         this._doneButton();
         this._checkReceipt(data.receipt, 0);
@@ -867,7 +889,7 @@ ha-card[data-compact="true"] .targets summary{justify-content:center;margin-inli
         const data = await response.json();
         if (session !== this._session) return;
         if (data.audio_fetches > 0) {
-          this._setStatus("Deine Sprachnachricht wurde von Alexa abgerufen.");
+          this._setStatus("Deine Sprachnachricht wurde abgerufen.");
           return;
         }
       } catch {
@@ -880,7 +902,7 @@ ha-card[data-compact="true"] .targets summary{justify-content:center;margin-inli
         );
       else
         this._setStatus(
-          "An Alexa gesendet. Der Audioabruf ist noch nicht best\xE4tigt."
+          "An die Lautsprecher gesendet. Der Audioabruf ist noch nicht best\xE4tigt."
         );
     }
     _close() {
@@ -911,7 +933,7 @@ ha-card[data-compact="true"] .targets summary{justify-content:center;margin-inli
   window.customCards.push({
     type: "homecall-card",
     name: "HomeCall",
-    description: "Voice announcements to your Echos \xB7 Durchsagen auf deinen Echos"
+    description: "Voice announcements to your speakers \xB7 Durchsagen auf deinen Lautsprechern"
   });
   var HomeCallCardEditor = class extends HTMLElement {
     constructor() {
@@ -1044,7 +1066,7 @@ ha-card[data-compact="true"] .targets summary{justify-content:center;margin-inli
       const labels = {
         appearance: de ? "Darstellung" : "Appearance",
         recipients: de ? "Standard-Empf\xE4nger" : "Default recipients",
-        show_speaker_selection: de ? "Echoauswahl anzeigen" : "Show speaker selection",
+        show_speaker_selection: de ? "Lautsprecherauswahl anzeigen" : "Show speaker selection",
         mode: "",
         targets: ""
       };

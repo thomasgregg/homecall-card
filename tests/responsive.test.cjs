@@ -38,8 +38,8 @@ for (const width of [
           `${width}x${height}: selector corner clearance`,
         );
       for (const [controlWidth, bottom] of [
-        [x.controlWidths.discard, 44],
-        [x.controlWidths.time, 32],
+        [x.controlWidths.discard, width < 200 ? 32 : 44],
+        [x.controlWidths.time, width < 200 ? 24 : 32],
       ])
         assert.ok(
           x.button * 0.59 + 8 <=
@@ -131,8 +131,8 @@ for (const [width, height] of [
           time,
         });
         for (const [w, bottom] of [
-          [x.controlWidths.discard, 44],
-          [x.controlWidths.time, 32],
+          [x.controlWidths.discard, width < 200 ? 32 : 44],
+          [x.controlWidths.time, width < 200 ? 24 : 32],
         ])
           assert.ok(
             x.button * 0.59 + 8 <=

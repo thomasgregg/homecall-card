@@ -17,6 +17,6 @@ The backend owns encoding, allowed recipients, and delivery links. The frontend 
 1. Unit tests load the source in an isolated JavaScript VM and exercise session cancellation, delayed startup, automatic reset, and selection retention.
 2. Geometry tests cover card sizes, measured footer widths, and 72 popover containment scenarios.
 3. Playwright loads the distributed bundle in Chromium and WebKit with controlled stand-ins for Home Assistant elements. Tests exercise the real mounted custom element and its `setConfig` rebuild, plus full-halo gaps, card-edge insets, and fixed geometry across phases.
-4. Hardware acceptance checks use an actual HA instance and Alexa devices. Native component styling and Amazon playback cannot be proven by the stand-in browser fixture.
+4. Hardware acceptance checks use an actual HA instance and Alexa or DLNA devices. Native component styling and hardware playback cannot be proven by the stand-in browser fixture.
 
 Browser test artifacts and traces are uploaded by CI on failure. The mock fixture never requests the microphone and never contacts Amazon.
