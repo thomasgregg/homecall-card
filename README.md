@@ -46,6 +46,10 @@ View the full-size captures: [ready](docs/assets/ui-expanded-ready.png), [record
 
 First install and configure the [HomeCall integration](https://github.com/thomasgregg/homecall). Use Home Assistant 2026.9 or newer and open the dashboard through HTTPS.
 
+**HTTPS is required for microphone recording.** Browsers only allow microphone access from a secure page, so a dashboard opened at an ordinary HTTP address such as `http://192.168.1.10:8123` cannot record voice messages, even if you allow microphone permission. Open Home Assistant using a trusted HTTPS address, either on your local network or through an existing remote-access connection. You do not need to expose Home Assistant publicly. See the [browser microphone requirements](https://developer.mozilla.org/en-US/docs/Web/API/MediaDevices/getUserMedia#privacy_and_security).
+
+This requirement applies to the dashboard used to record. Music Assistant and speaker audio delivery can still use local HTTP. You can also configure speakers and play the built-in test chime from the integration's HomeCall settings over HTTP.
+
 ### HACS
 
 [![Open in HACS](https://my.home-assistant.io/badges/hacs_repository.svg)](https://my.home-assistant.io/redirect/hacs_repository/?owner=thomasgregg&repository=homecall-card&category=plugin)
