@@ -1,5 +1,10 @@
 # Changelog
 
+## 1.1.2
+
+- Show only the central checkmark after sending successfully, removing the duplicate status checkmark.
+- Preserve the existing success styling, accessible status announcement, and automatic return to the microphone.
+
 ## 1.1.1
 
 - Support a 6-column × 1-row card with a 56px minimum height.

@@ -395,6 +395,7 @@ ha-card[data-short="true"]:has(.header[hidden]) .time{top:calc(50% - 7px)}
     const noSelection =
       this._phase === "ready" && this._selection?.length === 0;
     icon.hidden =
+      this._phase === "sent" ||
       (this._phase === "recorded" && !this._layout?.showLabel) ||
       (this._phase === "loading" && !this._loadingIndicator) ||
       this._phase === "recording" ||
