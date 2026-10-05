@@ -15,6 +15,7 @@ Tap to record. Choose the rooms. Tap to send. HomeCall Card gives Home Assistant
 ## Contents
 
 - [Features](#features)
+- [Screenshots](#screenshots)
 - [Install](#install)
 - [Everyday use](#everyday-use)
 - [Configuration](#configuration)
@@ -30,6 +31,16 @@ Tap to record. Choose the rooms. Tap to send. HomeCall Card gives Home Assistant
 - **Native visual editor:** no YAML required for normal configuration.
 - **Accessible feedback:** labeled controls, keyboard support, and detailed status.
 - **English and German:** language follows Home Assistant.
+
+## Screenshots
+
+Captured from a real Home Assistant installation. The waveform comes from microphone audio; the larger layouts use the card editor’s preview.
+
+![HomeCall Card ready, recording with a real waveform, and stopped at the recording limit](docs/assets/ui-states.png)
+
+![HomeCall Card in a compact dashboard row and with the expanded speaker picker open](docs/assets/ui-layouts.png)
+
+View the full-size captures: [ready](docs/assets/ui-expanded-ready.png), [recording](docs/assets/ui-expanded-recording.png), [ready to send](docs/assets/ui-expanded-limit.png), and [speaker selection](docs/assets/ui-speaker.png).
 
 ## Install
 

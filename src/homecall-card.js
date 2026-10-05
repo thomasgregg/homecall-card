@@ -394,9 +394,11 @@ ha-card[data-short="true"]:has(.header[hidden]) .time{top:calc(50% - 7px)}
     status.classList.toggle("sr-only", true);
     const noSelection =
       this._phase === "ready" && this._selection?.length === 0;
+    // The recorded caption already explains the limit. A second status button
+    // sits in the same footer space and overlaps that caption on native HA.
     icon.hidden =
       this._phase === "sent" ||
-      (this._phase === "recorded" && !this._layout?.showLabel) ||
+      this._phase === "recorded" ||
       (this._phase === "loading" && !this._loadingIndicator) ||
       this._phase === "recording" ||
       starting ||

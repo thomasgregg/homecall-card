@@ -497,7 +497,7 @@ ha-card[data-short="true"]:has(.header[hidden]) .time{top:calc(50% - 7px)}
       info.classList.toggle("sr-only", this._phase === "recording" || starting);
       status.classList.toggle("sr-only", true);
       const noSelection = this._phase === "ready" && this._selection?.length === 0;
-      icon.hidden = this._phase === "sent" || this._phase === "recorded" && !this._layout?.showLabel || this._phase === "loading" && !this._loadingIndicator || this._phase === "recording" || starting || this._phase === "ready" && !noSelection;
+      icon.hidden = this._phase === "sent" || this._phase === "recorded" || this._phase === "loading" && !this._loadingIndicator || this._phase === "recording" || starting || this._phase === "ready" && !noSelection;
       icon.innerHTML = `<ha-icon icon="mdi:${this._phase === "sent" ? "check-circle-outline" : this._phase === "error" || noSelection ? "alert-circle-outline" : "clock-outline"}"></ha-icon>`;
     }
     _showStatus() {

@@ -618,3 +618,35 @@ for (const selector of [true, false]) {
     }
   });
 }
+
+for (const language of ["en", "de"]) {
+  test(`recording limit caption clears the footer controls in ${language}`, async ({
+    page,
+  }) => {
+    await fixture(page, 470, 312);
+    await page.locator("homecall-card").evaluate((c, language) => {
+      c._lang = language;
+      c._phase = "recording";
+      c._started = performance.now() - 60000;
+      c._stopAtLimit();
+    }, language);
+    await expect(page.locator("homecall-card .action-label")).toBeVisible();
+    await expect(page.locator("homecall-card .status-more")).toBeHidden();
+    const positions = await page.locator("homecall-card").evaluate((c) => {
+      const rect = (selector) =>
+        c.shadowRoot.querySelector(selector).getBoundingClientRect().toJSON();
+      return {
+        caption: rect(".action-label"),
+        discard: rect(".discard"),
+        time: rect(".time"),
+      };
+    });
+    expect(positions.caption.left).toBeGreaterThan(positions.discard.right);
+    expect(positions.caption.right).toBeLessThan(positions.time.left);
+    await expect(page.locator("homecall-card .status")).toHaveText(
+      language === "de"
+        ? "Zeitlimit erreicht - bereit zum Senden."
+        : "Limit reached - ready to send.",
+    );
+  });
+}

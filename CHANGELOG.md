@@ -1,5 +1,11 @@
 # Changelog
 
+## Unreleased
+
+- Hide the redundant status clock at the recording limit so it cannot overlap the ready-to-send caption.
+- Add English and German browser regression coverage for recording-limit footer clearance.
+- Add README galleries captured from a real Home Assistant installation, including microphone waveforms, compact layouts, and speaker selection.
+
 ## 1.1.4
 
 - Display the existing banner through a standard Markdown image and PNG export for HACS compatibility.
