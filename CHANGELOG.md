@@ -1,5 +1,10 @@
 # Changelog
 
+## 1.3.2
+
+- Document the optional announcement chime supplied by HomeCall integration 1.8.0 and its direct Google Cast exception. Keep integration 1.7.0 as the minimum for recording; the new chime requires 1.8.0.
+- Companion documentation and version update. Recording, recipient selection and card layout are unchanged from 1.3.1.
+
 ## 1.3.1
 
 - Reduce the text speaker selector to 32px high and use that footprint in the circle's corner clearance calculation, while keeping its font, horizontal padding and the compact icon controls.

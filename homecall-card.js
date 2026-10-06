@@ -1,4 +1,4 @@
-/*! HomeCall Card v1.3.1 | MIT License | github.com/thomasgregg/homecall-card */
+/*! HomeCall Card v1.3.2 | MIT License | github.com/thomasgregg/homecall-card */
 (() => {
   // src/layout.js
   function homeCallLayout(width, height, hasSelector = true, selectorWidth = 100, footerWidths = null) {
@@ -949,7 +949,7 @@ ha-card[data-short="true"]:has(.header[hidden]) .time{top:calc(50% - 7px)}
       this._recordingTargets = [...this._selection];
       this._recordingSkippedTargets = [...this._skippedTargets || []];
       this._diagnostics = {
-        card_version: false ? "development" : "1.3.1",
+        card_version: false ? "development" : "1.3.2",
         browser_timings_ms: {}
       };
       const tapped = performance.now();
