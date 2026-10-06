@@ -1,5 +1,11 @@
 # Changelog
 
+## 1.2.1
+
+- Hide raw timing diagnostics and the extra status icon after sending or returning to ready by default.
+- Add an optional Show diagnostics switch under Troubleshooting in the native editor (`show_diagnostics: true` in YAML). Error explanations and optional local recording review remain available without enabling diagnostics.
+- Preserve first-sample readiness, complete recording flush and timing measurements. Normal recordings receive no added waits or silence.
+
 ## 1.2.0
 
 - Replace ScriptProcessor recording with HomeCall's AudioWorklet recorder. Show Speak now after the first microphone samples arrive; retain the opening samples and flush the final partial buffer before sending.

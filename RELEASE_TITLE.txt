@@ -1,1 +1,1 @@
-Reliable recording and optional local preview
+Optional diagnostics and a clean default card

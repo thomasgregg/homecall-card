@@ -1,4 +1,4 @@
-/*! HomeCall Card v1.2.0 | MIT License | github.com/thomasgregg/homecall-card */
+/*! HomeCall Card v1.2.1 | MIT License | github.com/thomasgregg/homecall-card */
 (() => {
   // src/layout.js
   function homeCallLayout(width, height, hasSelector = true, selectorWidth = 100, footerWidths = null) {
@@ -529,8 +529,8 @@ ha-card[data-short="true"]:has(.header[hidden]) .time{top:calc(50% - 7px)}
       const info = this._view.querySelector(".message-control"), status = this._view.querySelector(".status"), icon = this._view.querySelector(".status-more");
       info.classList.toggle("sr-only", this._phase === "recording" || starting);
       status.classList.toggle("sr-only", true);
-      const noSelection = this._phase === "ready" && this._selection?.length === 0;
-      icon.hidden = this._phase === "sent" && !this._diagnostics || this._phase === "recorded" && !this.config?.preview_before_send || this._phase === "loading" && !this._loadingIndicator || this._phase === "recording" || starting || this._phase === "ready" && !noSelection && !this._diagnostics;
+      const noSelection = this._phase === "ready" && this._selection?.length === 0, showDiagnostics = this.config?.show_diagnostics === true && !!this._diagnostics;
+      icon.hidden = this._phase === "sent" && !showDiagnostics || this._phase === "recorded" && !this.config?.preview_before_send || this._phase === "loading" && !this._loadingIndicator || this._phase === "recording" || starting || this._phase === "ready" && !noSelection && !showDiagnostics;
       icon.innerHTML = `<ha-icon icon="mdi:${this._phase === "sent" ? "check-circle-outline" : this._phase === "error" || noSelection ? "alert-circle-outline" : "clock-outline"}"></ha-icon>`;
     }
     _showStatus() {
@@ -563,7 +563,7 @@ ha-card[data-short="true"]:has(.header[hidden]) .time{top:calc(50% - 7px)}
           popover.append(send);
         }
       }
-      if (this._diagnostics) {
+      if (this.config?.show_diagnostics === true && this._diagnostics) {
         const details = document.createElement("details");
         const summary = document.createElement("summary");
         summary.textContent = this._t("Diagnose");
@@ -735,7 +735,7 @@ ha-card[data-short="true"]:has(.header[hidden]) .time{top:calc(50% - 7px)}
       this._recordingTargets = [...this._selection];
       this._clearPreview();
       this._diagnostics = {
-        card_version: false ? "development" : "1.2.0",
+        card_version: false ? "development" : "1.2.1",
         browser_timings_ms: {}
       };
       const tapped = performance.now();
@@ -1348,6 +1348,8 @@ ha-card[data-short="true"]:has(.header[hidden]) .time{top:calc(50% - 7px)}
           }
           if (data.preview_before_send) config.preview_before_send = true;
           else delete config.preview_before_send;
+          if (data.show_diagnostics) config.show_diagnostics = true;
+          else delete config.show_diagnostics;
           const modeChanged = Array.isArray(config.default_targets) !== Array.isArray(this._config.default_targets);
           this._emit(config);
           if (modeChanged) this._render();
@@ -1407,17 +1409,27 @@ ha-card[data-short="true"]:has(.header[hidden]) .time{top:calc(50% - 7px)}
           flatten: true,
           icon: "mdi:speaker-multiple",
           schema: recipientFields
+        },
+        {
+          name: "troubleshooting",
+          type: "expandable",
+          flatten: true,
+          icon: "mdi:bug-outline",
+          schema: [{ name: "show_diagnostics", selector: { boolean: {} } }]
         }
       ];
       form.data = {
         show_speaker_selection: this._config.show_speaker_selection !== false,
         preview_before_send: !!this._config.preview_before_send,
+        show_diagnostics: this._config.show_diagnostics === true,
         mode: custom ? "custom" : "all",
         targets: this._config.default_targets || []
       };
       const labels = {
         appearance: de ? "Darstellung" : "Appearance",
         recipients: de ? "Standard-Empf\xE4nger" : "Default recipients",
+        troubleshooting: de ? "Fehlerbehebung" : "Troubleshooting",
+        show_diagnostics: de ? "Diagnose anzeigen" : "Show diagnostics",
         show_speaker_selection: de ? "Lautsprecherauswahl anzeigen" : "Show speaker selection",
         preview_before_send: de ? "Aufnahme vor dem Senden anh\xF6ren" : "Review recording before sending",
         mode: "",

@@ -44,7 +44,7 @@ View the full-size captures: [ready](docs/assets/ui-expanded-ready.png), [record
 
 ## Install
 
-First install and configure the [HomeCall integration](https://github.com/thomasgregg/homecall) **1.7.0 or newer**. HomeCall Card 1.2.0 uses the recorder module supplied by that integration. Update the integration first and restart Home Assistant, then update the card and refresh every dashboard tab. Use Home Assistant 2026.9 or newer and open the dashboard through HTTPS.
+First install and configure the [HomeCall integration](https://github.com/thomasgregg/homecall) **1.7.0 or newer**. HomeCall Card 1.2.1 uses the recorder module supplied by that integration. Update the integration first and restart Home Assistant, then update the card and refresh every dashboard tab. Use Home Assistant 2026.9 or newer and open the dashboard through HTTPS.
 
 **HTTPS is required for microphone recording.** Browsers only allow microphone access from a secure page, so a dashboard opened at an ordinary HTTP address such as `http://192.168.1.10:8123` cannot record voice messages, even if you allow microphone permission. Open Home Assistant using a trusted HTTPS address, either on your local network or through an existing remote-access connection. You do not need to expose Home Assistant publicly. See the [browser microphone requirements](https://developer.mozilla.org/en-US/docs/Web/API/MediaDevices/getUserMedia#privacy_and_security).
 

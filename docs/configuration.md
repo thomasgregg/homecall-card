@@ -6,6 +6,8 @@ Appearance controls whether the speaker picker is shown and whether recordings a
 
 **Review recording before sending** is optional and defaults to off (`preview_before_send: true` enables it in YAML). When enabled, the first tap after recording stops and flushes capture, then opens a local audio preview. Tap **Send** in the preview or dismiss it and tap the main Send button. Preview audio stays in the browser until you explicitly send it. Discard releases the preview too.
 
+**Show diagnostics** is optional and defaults to off. Enable it under **Troubleshooting** in the native editor, or set `show_diagnostics: true` in YAML, when investigating capture or playback issues. It exposes the measured timings in the status panel; recording behavior is unchanged.
+
 A missing `default_targets` selects all allowed available devices. An explicit empty array selects none. New recordings retain the current in-card selection; a configuration rebuild initializes it from the saved defaults again.
 
 ## Sections sizing

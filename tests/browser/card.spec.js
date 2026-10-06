@@ -638,6 +638,9 @@ test("capture readiness, final flush, frozen recipients and private diagnostics"
 }) => {
   await controlledRecorder(page);
   await page.locator("homecall-card").evaluate((c) => {
+    c.config.show_diagnostics = true;
+  });
+  await page.locator("homecall-card").evaluate((c) => {
     c._selection = ["notify.changed_speak"];
   });
   await page.locator("homecall-card .main").click();
@@ -702,6 +705,9 @@ test("optional local review flushes capture and waits for a separate Send", asyn
   ).toBeVisible();
   expect(await page.evaluate(() => window.uploads.length)).toBe(0);
   expect(await page.evaluate(() => window.trackStopped)).toBe(true);
+  await expect(
+    page.locator("homecall-card .status-popover details"),
+  ).toHaveCount(0);
   await page.locator("homecall-card .preview-send").click();
   await expect(page.locator("homecall-card ha-card")).toHaveAttribute(
     "data-phase",
@@ -714,6 +720,9 @@ test("diagnostic copy starts the clipboard write before refresh and retains the 
   page,
 }) => {
   await controlledRecorder(page);
+  await page.locator("homecall-card").evaluate((c) => {
+    c.config.show_diagnostics = true;
+  });
   await page.locator("homecall-card .main").click();
   await page.evaluate(() =>
     window.recorderPort.onmessage({
@@ -991,3 +1000,97 @@ for (const language of ["en", "de"]) {
     );
   });
 }
+
+test("diagnostics stay hidden by default after sending, reset and recording errors", async ({
+  page,
+}) => {
+  await page.clock.install();
+  await controlledRecorder(page);
+  await page.locator("homecall-card .main").click();
+  await page.evaluate(() =>
+    window.recorderPort.onmessage({
+      data: { type: "stopped", total: 12000, reason: "requested" },
+    }),
+  );
+  await expect(page.locator("homecall-card ha-card")).toHaveAttribute(
+    "data-phase",
+    "sent",
+  );
+  await expect(page.locator("homecall-card .status-more")).toBeHidden();
+  await page.clock.fastForward(5000);
+  await expect(page.locator("homecall-card ha-card")).toHaveAttribute(
+    "data-phase",
+    "ready",
+  );
+  await expect(page.locator("homecall-card .status-more")).toBeHidden();
+  await page.locator("homecall-card .main").click();
+  await expect
+    .poll(() => page.evaluate(() => !!window.recorderPort.onmessage))
+    .toBe(true);
+  await page.evaluate(() =>
+    window.microphoneTrack.dispatchEvent(new Event("ended")),
+  );
+  await expect(page.locator("homecall-card ha-card")).toHaveAttribute(
+    "data-phase",
+    "error",
+  );
+  await page.locator("homecall-card .status-more").click();
+  await expect(page.locator("homecall-card .status-popover")).toBeVisible();
+  await expect(
+    page.locator("homecall-card .status-popover details"),
+  ).toHaveCount(0);
+  await expect(page.locator("homecall-card .status-popover pre")).toHaveCount(
+    0,
+  );
+});
+
+test("the native editor enables diagnostics explicitly and removes the option when disabled", async ({
+  page,
+}) => {
+  await fixture(page);
+  const config = await page.evaluate(() => {
+    const editor = document.createElement("homecall-card-editor");
+    editor.setConfig({
+      type: "custom:homecall-card",
+      preview_before_send: true,
+    });
+    document.querySelector("main").append(editor);
+    const form = editor.shadowRoot.querySelector("ha-form");
+    const initial = form.data.show_diagnostics;
+    const fields = form.schema.find((s) => s.name === "troubleshooting").schema;
+    const emitted = [];
+    editor.addEventListener("config-changed", (event) =>
+      emitted.push(event.detail.config),
+    );
+    form.dispatchEvent(
+      new CustomEvent("value-changed", {
+        detail: { value: { ...form.data, show_diagnostics: true } },
+      }),
+    );
+    const savedEditor = document.createElement("homecall-card-editor");
+    savedEditor.setConfig(emitted[0]);
+    document.querySelector("main").append(savedEditor);
+    savedEditor.addEventListener("config-changed", (event) =>
+      emitted.push(event.detail.config),
+    );
+    const savedForm = savedEditor.shadowRoot.querySelector("ha-form");
+    const enabled = savedForm.data.show_diagnostics;
+    savedForm.dispatchEvent(
+      new CustomEvent("value-changed", {
+        detail: { value: { ...savedForm.data, show_diagnostics: false } },
+      }),
+    );
+    return { initial, fields, enabled, emitted };
+  });
+  expect(config.initial).toBe(false);
+  expect(config.fields).toEqual([
+    { name: "show_diagnostics", selector: { boolean: {} } },
+  ]);
+  expect(config.enabled).toBe(true);
+  expect(config.emitted[0]).toMatchObject({
+    show_diagnostics: true,
+    preview_before_send: true,
+  });
+  expect(config.emitted[1]).not.toHaveProperty("show_diagnostics");
+  expect(config.emitted[1].preview_before_send).toBe(true);
+});

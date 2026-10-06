@@ -437,16 +437,18 @@ ha-card[data-short="true"]:has(.header[hidden]) .time{top:calc(50% - 7px)}
     info.classList.toggle("sr-only", this._phase === "recording" || starting);
     status.classList.toggle("sr-only", true);
     const noSelection =
-      this._phase === "ready" && this._selection?.length === 0;
+        this._phase === "ready" && this._selection?.length === 0,
+      showDiagnostics =
+        this.config?.show_diagnostics === true && !!this._diagnostics;
     // The recorded caption already explains the limit. A second status button
     // sits in the same footer space and overlaps that caption on native HA.
     icon.hidden =
-      (this._phase === "sent" && !this._diagnostics) ||
+      (this._phase === "sent" && !showDiagnostics) ||
       (this._phase === "recorded" && !this.config?.preview_before_send) ||
       (this._phase === "loading" && !this._loadingIndicator) ||
       this._phase === "recording" ||
       starting ||
-      (this._phase === "ready" && !noSelection && !this._diagnostics);
+      (this._phase === "ready" && !noSelection && !showDiagnostics);
     icon.innerHTML = `<ha-icon icon="mdi:${this._phase === "sent" ? "check-circle-outline" : this._phase === "error" || noSelection ? "alert-circle-outline" : "clock-outline"}"></ha-icon>`;
   }
   _showStatus() {
@@ -485,7 +487,7 @@ ha-card[data-short="true"]:has(.header[hidden]) .time{top:calc(50% - 7px)}
         popover.append(send);
       }
     }
-    if (this._diagnostics) {
+    if (this.config?.show_diagnostics === true && this._diagnostics) {
       const details = document.createElement("details");
       const summary = document.createElement("summary");
       summary.textContent = this._t("Diagnose");
@@ -1382,6 +1384,8 @@ class HomeCallCardEditor extends HTMLElement {
           }
           if (data.preview_before_send) config.preview_before_send = true;
           else delete config.preview_before_send;
+          if (data.show_diagnostics) config.show_diagnostics = true;
+          else delete config.show_diagnostics;
           const modeChanged =
             Array.isArray(config.default_targets) !==
             Array.isArray(this._config.default_targets);
@@ -1444,16 +1448,26 @@ class HomeCallCardEditor extends HTMLElement {
         icon: "mdi:speaker-multiple",
         schema: recipientFields,
       },
+      {
+        name: "troubleshooting",
+        type: "expandable",
+        flatten: true,
+        icon: "mdi:bug-outline",
+        schema: [{ name: "show_diagnostics", selector: { boolean: {} } }],
+      },
     ];
     form.data = {
       show_speaker_selection: this._config.show_speaker_selection !== false,
       preview_before_send: !!this._config.preview_before_send,
+      show_diagnostics: this._config.show_diagnostics === true,
       mode: custom ? "custom" : "all",
       targets: this._config.default_targets || [],
     };
     const labels = {
       appearance: de ? "Darstellung" : "Appearance",
       recipients: de ? "Standard-Empfänger" : "Default recipients",
+      troubleshooting: de ? "Fehlerbehebung" : "Troubleshooting",
+      show_diagnostics: de ? "Diagnose anzeigen" : "Show diagnostics",
       show_speaker_selection: de
         ? "Lautsprecherauswahl anzeigen"
         : "Show speaker selection",
