@@ -412,7 +412,8 @@ test("countdown and ring reach the limit without sending, and expose Send on a t
   await fixture(page, 177.5, 184);
   await page.locator("homecall-card").evaluate((c) => {
     c._phase = "recording";
-    c._started = performance.now() - 30000;
+    c._sampleRate = 48000;
+    c._samples = 48000 * 30;
     c._view.classList.add("recording");
     c._button("Senden", "microphone");
     c._draw();
@@ -453,10 +454,14 @@ test("microphone startup keeps its native appearance and ignores repeat clicks",
   await fixture(page);
   await page.locator("homecall-card").evaluate((c) => {
     window.AudioContext = class {
+      constructor() {
+        this.audioWorklet = { addModule: () => new Promise(() => {}) };
+      }
       resume() {
         return new Promise(() => {});
       }
     };
+    window.AudioWorkletNode ||= class {};
     window.isSecureContext ||
       Object.defineProperty(window, "isSecureContext", { value: true });
     if (!navigator.mediaDevices)
@@ -483,6 +488,342 @@ test("microphone startup keeps its native appearance and ignores repeat clicks",
       .evaluate((b) => b.querySelector("ha-icon") === window.startIcon),
   ).toBe(true);
 });
+
+async function controlledRecorder(
+  page,
+  preview = false,
+  constructionFails = false,
+) {
+  await fixture(page, 376, 350);
+  await page.locator("homecall-card").evaluate(
+    (c, { preview, constructionFails }) => {
+      c.config.preview_before_send = preview;
+      window.isSecureContext ||
+        Object.defineProperty(window, "isSecureContext", { value: true });
+      window.AudioContext = class {
+        constructor(options) {
+          this.sampleRate = options?.sampleRate || 96000;
+          this.state = "running";
+          this.audioWorklet = { addModule: async () => {} };
+        }
+        resume() {
+          return Promise.resolve();
+        }
+        close() {
+          return Promise.resolve();
+        }
+        createMediaStreamSource() {
+          return { connect() {}, disconnect() {} };
+        }
+      };
+      window.AudioWorkletNode = class {
+        constructor() {
+          if (constructionFails)
+            throw new Error("Recorder construction failed");
+          this.port = window.recorderPort = {
+            postMessage(message) {
+              window.stopRequested = message.type === "stop";
+            },
+            close() {},
+          };
+        }
+        connect() {}
+        disconnect() {}
+      };
+      window.microphoneTrack = Object.assign(new EventTarget(), {
+        stop() {
+          window.trackStopped = true;
+        },
+      });
+      Object.defineProperty(navigator, "mediaDevices", {
+        configurable: true,
+        value: {
+          getUserMedia: async () => ({
+            getTracks: () => [window.microphoneTrack],
+          }),
+        },
+      });
+      window.uploads = [];
+      c._hass.fetchWithAuth = async (url, options) => {
+        if (options?.method === "POST") {
+          const wav = new DataView(await options.body.arrayBuffer());
+          window.uploads.push({
+            url,
+            samples: wav.getUint32(40, true) / 2,
+            sampleRate: wav.getUint32(24, true),
+            first: wav.getInt16(44, true),
+            last: wav.getInt16(wav.byteLength - 2, true),
+          });
+          return {
+            ok: true,
+            json: async () => ({
+              results: [{ accepted: true }],
+              receipt: "private-audio-token",
+              diagnostics: {
+                diagnostic_id: "diagnostic-only-id",
+                audio_fetches: 0,
+                timings_ms: { conversion: 12 },
+              },
+            }),
+          };
+        }
+        if (url.includes("diagnostic_id="))
+          return {
+            ok: true,
+            json: async () => ({
+              diagnostics: {
+                diagnostic_id: "diagnostic-only-id",
+                audio_fetches: 1,
+                timings_ms: { conversion: 12, clip_to_first_fetch: 30 },
+              },
+            }),
+          };
+        throw new Error("Recording must not fetch status before capturing");
+      };
+      Object.defineProperty(navigator, "clipboard", {
+        configurable: true,
+        value: {
+          writeText: async (text) => {
+            window.copiedDiagnostics = text;
+          },
+        },
+      });
+    },
+    { preview, constructionFails },
+  );
+  await page.locator("homecall-card .main").click();
+  if (constructionFails) {
+    await expect(page.locator("homecall-card ha-card")).toHaveAttribute(
+      "data-phase",
+      "error",
+    );
+    return;
+  }
+  await expect
+    .poll(() => page.evaluate(() => !!window.recorderPort))
+    .toBe(true);
+  await expect(page.locator("homecall-card ha-card")).toHaveAttribute(
+    "data-phase",
+    "starting",
+  );
+  await page.evaluate(() => {
+    window.recorderPort.onmessage({ data: { type: "ready" } });
+    window.recorderPort.onmessage({
+      data: {
+        type: "chunk",
+        sequence: 0,
+        samples: new Float32Array(12000).fill(0.25),
+      },
+    });
+  });
+  await expect(page.locator("homecall-card ha-card")).toHaveAttribute(
+    "data-phase",
+    "recording",
+  );
+}
+
+test("recorder construction failure releases the microphone without unhandled rejections", async ({
+  page,
+}) => {
+  const errors = [];
+  page.on("pageerror", (error) => errors.push(error.message));
+  await controlledRecorder(page, false, true);
+  expect(await page.evaluate(() => window.trackStopped)).toBe(true);
+  expect(await page.evaluate(() => window.uploads.length)).toBe(0);
+  expect(errors).toEqual([]);
+});
+
+test("capture readiness, final flush, frozen recipients and private diagnostics", async ({
+  page,
+}) => {
+  await controlledRecorder(page);
+  await page.locator("homecall-card").evaluate((c) => {
+    c._selection = ["notify.changed_speak"];
+  });
+  await page.locator("homecall-card .main").click();
+  await expect(page.locator("homecall-card ha-card")).toHaveAttribute(
+    "data-phase",
+    "stopping",
+  );
+  expect(await page.evaluate(() => window.stopRequested)).toBe(true);
+  expect(await page.evaluate(() => window.uploads.length)).toBe(0);
+  await page.evaluate(() => {
+    window.recorderPort.onmessage({
+      data: {
+        type: "chunk",
+        sequence: 1,
+        samples: new Float32Array(128).fill(0.5),
+      },
+    });
+    window.recorderPort.onmessage({
+      data: { type: "stopped", total: 12128, reason: "requested" },
+    });
+  });
+  await expect(page.locator("homecall-card ha-card")).toHaveAttribute(
+    "data-phase",
+    "sent",
+  );
+  const uploads = await page.evaluate(() => window.uploads);
+  expect(uploads).toHaveLength(1);
+  expect(uploads[0]).toMatchObject({
+    samples: 12128,
+    sampleRate: 48000,
+    first: 8191,
+    last: 16383,
+  });
+  expect(uploads[0].url).toContain("notify.kitchen_speak");
+  expect(uploads[0].url).not.toContain("changed_speak");
+  expect(await page.evaluate(() => window.trackStopped)).toBe(true);
+  await page.locator("homecall-card .status-more").click();
+  await page.locator("homecall-card .status-popover summary").click();
+  await page.getByText("Copy diagnostics", { exact: true }).click();
+  const copied = await page.evaluate(() => window.copiedDiagnostics);
+  expect(JSON.parse(copied).server.timings_ms.clip_to_first_fetch).toBe(30);
+  expect(copied).not.toContain("private-audio-token");
+  expect(copied).not.toContain("http");
+});
+
+test("optional local review flushes capture and waits for a separate Send", async ({
+  page,
+}) => {
+  await controlledRecorder(page, true);
+  await page.locator("homecall-card .main").click();
+  await page.evaluate(() => {
+    window.recorderPort.onmessage({
+      data: { type: "stopped", total: 12000, reason: "requested" },
+    });
+  });
+  await expect(page.locator("homecall-card ha-card")).toHaveAttribute(
+    "data-phase",
+    "recorded",
+  );
+  await expect(
+    page.locator("homecall-card .status-popover audio"),
+  ).toBeVisible();
+  expect(await page.evaluate(() => window.uploads.length)).toBe(0);
+  expect(await page.evaluate(() => window.trackStopped)).toBe(true);
+  await page.locator("homecall-card .preview-send").click();
+  await expect(page.locator("homecall-card ha-card")).toHaveAttribute(
+    "data-phase",
+    "sent",
+  );
+  expect(await page.evaluate(() => window.uploads.length)).toBe(1);
+});
+
+test("diagnostic copy starts the clipboard write before refresh and retains the clicked trace", async ({
+  page,
+}) => {
+  await controlledRecorder(page);
+  await page.locator("homecall-card .main").click();
+  await page.evaluate(() =>
+    window.recorderPort.onmessage({
+      data: { type: "stopped", total: 12000, reason: "requested" },
+    }),
+  );
+  await expect(page.locator("homecall-card ha-card")).toHaveAttribute(
+    "data-phase",
+    "sent",
+  );
+  await page.locator("homecall-card").evaluate((c) => {
+    c._hass.fetchWithAuth = () =>
+      new Promise((resolve) => {
+        window.finishDiagnosticFetch = resolve;
+      });
+    window.ClipboardItem = class {
+      constructor(data) {
+        this.data = data;
+      }
+      getType(type) {
+        return this.data[type];
+      }
+    };
+    navigator.clipboard.write = async (items) => {
+      window.clipboardWriteStarted = true;
+      window.copiedDiagnostics = await (
+        await items[0].getType("text/plain")
+      ).text();
+    };
+  });
+  await page.locator("homecall-card .status-more").click();
+  await page.locator("homecall-card .status-popover summary").click();
+  await page.getByText("Copy diagnostics", { exact: true }).click();
+  expect(await page.evaluate(() => window.clipboardWriteStarted)).toBe(true);
+  expect(await page.evaluate(() => window.copiedDiagnostics)).toBeUndefined();
+  await page.locator("homecall-card").evaluate((c) => {
+    c._diagnostics = { server: { diagnostic_id: "new-recording" } };
+    window.finishDiagnosticFetch({
+      ok: true,
+      json: async () => ({
+        diagnostics: {
+          diagnostic_id: "diagnostic-only-id",
+          timings_ms: { clip_to_first_fetch: 42 },
+        },
+      }),
+    });
+  });
+  await expect
+    .poll(() => page.evaluate(() => window.copiedDiagnostics))
+    .toBeTruthy();
+  const copied = JSON.parse(
+    await page.evaluate(() => window.copiedDiagnostics),
+  );
+  expect(copied.server.diagnostic_id).toBe("diagnostic-only-id");
+  expect(copied.server.timings_ms.clip_to_first_fetch).toBe(42);
+  expect(
+    await page
+      .locator("homecall-card")
+      .evaluate((c) => c._diagnostics.server.diagnostic_id),
+  ).toBe("new-recording");
+});
+
+test("missing flush acknowledgement fails without uploading partial audio", async ({
+  page,
+}) => {
+  await page.clock.install();
+  await controlledRecorder(page);
+  await page.locator("homecall-card .main").click();
+  await page.clock.fastForward(2000);
+  await expect(page.locator("homecall-card ha-card")).toHaveAttribute(
+    "data-phase",
+    "error",
+  );
+  expect(await page.evaluate(() => window.uploads.length)).toBe(0);
+  expect(await page.evaluate(() => window.trackStopped)).toBe(true);
+});
+
+for (const interruptedBy of ["microphone", "context"]) {
+  test(`unexpected ${interruptedBy} interruption stops recording without uploading`, async ({
+    page,
+  }) => {
+    await controlledRecorder(page);
+    await page.locator("homecall-card").evaluate((c, interruptedBy) => {
+      if (interruptedBy === "microphone")
+        window.microphoneTrack.dispatchEvent(new Event("ended"));
+      else {
+        c._context.state = "interrupted";
+        c._context.onstatechange();
+      }
+    }, interruptedBy);
+    await expect(page.locator("homecall-card ha-card")).toHaveAttribute(
+      "data-phase",
+      "error",
+    );
+    expect(await page.evaluate(() => window.uploads.length)).toBe(0);
+    expect(await page.evaluate(() => window.trackStopped)).toBe(true);
+    expect(
+      await page.locator("homecall-card").evaluate((c) => c._chunks.length),
+    ).toBe(0);
+    expect(
+      await page
+        .locator("homecall-card")
+        .evaluate((c) => c._diagnostics.recorder_error),
+    ).toBe(
+      interruptedBy === "microphone"
+        ? "microphone_ended"
+        : "context_interrupted",
+    );
+  });
+}
 
 for (const width of [160, 177.5, 246, 376]) {
   test(`one-row controls stay centered and timer sits below speaker at ${width}px`, async ({

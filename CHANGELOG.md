@@ -1,5 +1,14 @@
 # Changelog
 
+## 1.2.0
+
+- Replace ScriptProcessor recording with HomeCall's AudioWorklet recorder. Show Speak now after the first microphone samples arrive; retain the opening samples and flush the final partial buffer before sending.
+- Remove the status refresh from microphone startup, freeze the selected recipients for the recording, and enforce the 60-second limit by sample count.
+- Add optional Review recording before sending, disabled by default, with local playback and a separate Send action.
+- Add copyable capture, upload and HA timing diagnostics without recorded audio or audio bearer links. Keep diagnostic copying compatible with Safari's click-permission requirement.
+- Request 48 kHz capture to match backend limits; reject incomplete recordings on microphone disconnect, audio-context interruption or missing flush acknowledgement. Preserve cancellation and stale-session guards.
+- Require HomeCall integration 1.7.0 or newer. Update the integration first, restart HA, then update the card and refresh dashboard tabs. Normal messages receive no added padding or fixed wait; affected EchoMuse/MA setups still need hardware retesting.
+
 ## 1.1.6
 
 - Update speaker compatibility guidance for Sonos, Music Assistant, Google Cast and direct EchoMuse announcements through HomeCall 1.6.0.

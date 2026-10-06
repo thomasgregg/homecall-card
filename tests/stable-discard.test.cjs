@@ -12,7 +12,8 @@ const context = {
       return {};
     }
   },
-  window: { isSecureContext: true },
+  window: { isSecureContext: true, AudioWorkletNode: class {} },
+  performance: { now: () => 0 },
   navigator: { mediaDevices: {} },
   setTimeout(fn, delay) {
     const key = ++id;
@@ -139,6 +140,9 @@ function fixture(phase = "recording") {
     micRequested = deferred();
   let lateStops = 0;
   context.window.AudioContext = class {
+    constructor() {
+      this.audioWorklet = { addModule: () => Promise.resolve() };
+    }
     resume() {
       return Promise.resolve();
     }
@@ -162,27 +166,36 @@ function fixture(phase = "recording") {
   await start;
   assert.ok(lateStops > 0);
   assert.equal(starting._phase, "ready");
-  // A delayed status body must not repopulate recipients after cancellation.
-  const body = deferred(),
-    bodyRequested = deferred();
+  // A worklet module can finish loading after Discard, without starting capture.
+  const module = deferred(),
+    moduleRequested = deferred();
+  context.window.AudioContext = class {
+    constructor() {
+      this.audioWorklet = {
+        addModule: () => {
+          moduleRequested.resolve();
+          return module.promise;
+        },
+      };
+    }
+    resume() {
+      return Promise.resolve();
+    }
+    close() {
+      return Promise.resolve();
+    }
+  };
   context.navigator.mediaDevices.getUserMedia = async () => ({
     getTracks: () => [{ stop() {} }],
   });
-  const { c: jsonPending } = fixture("ready");
-  jsonPending._hass.fetchWithAuth = async () => ({
-    ok: true,
-    json: () => {
-      bodyRequested.resolve();
-      return body.promise;
-    },
-  });
-  const jsonStart = jsonPending._start();
-  await bodyRequested.promise;
-  jsonPending._reset();
-  body.resolve({ targets: [] });
-  await jsonStart;
-  assert.equal(jsonPending._phase, "ready");
-  assert.equal(jsonPending.status, "Tippe auf das Mikrofon");
+  const { c: modulePending } = fixture("ready");
+  const moduleStart = modulePending._start();
+  await moduleRequested.promise;
+  modulePending._reset();
+  module.resolve();
+  await moduleStart;
+  assert.equal(modulePending._phase, "ready");
+  assert.equal(modulePending.status, "Tippe auf das Mikrofon");
   // A receipt completing after reset must not overwrite Ready.
   const receipt = deferred(),
     { c: sent } = fixture("sent");

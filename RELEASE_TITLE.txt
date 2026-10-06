@@ -1,1 +1,1 @@
-EchoMuse compatibility and recording setup guidance
+Reliable recording and optional local preview

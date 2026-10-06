@@ -7,6 +7,7 @@ await build({
   entryPoints: ["src/homecall-card.js"],
   outfile: "homecall-card.js",
   bundle: true,
+  define: { __HOMECALL_CARD_VERSION__: JSON.stringify(version) },
   format: "iife",
   target: "es2022",
   minify: false,

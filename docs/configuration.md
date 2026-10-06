@@ -2,7 +2,9 @@
 
 ## Native editor
 
-Appearance controls whether the speaker picker is shown. Default recipients selects all allowed available devices or a custom list. Save the card and leave dashboard edit mode before judging its final size: edit handles and the preview can have different widths.
+Appearance controls whether the speaker picker is shown and whether recordings are reviewed before sending. Default recipients selects all allowed available devices or a custom list. Save the card and leave dashboard edit mode before judging its final size: edit handles and the preview can have different widths.
+
+**Review recording before sending** is optional and defaults to off (`preview_before_send: true` enables it in YAML). When enabled, the first tap after recording stops and flushes capture, then opens a local audio preview. Tap **Send** in the preview or dismiss it and tap the main Send button. Preview audio stays in the browser until you explicitly send it. Discard releases the preview too.
 
 A missing `default_targets` selects all allowed available devices. An explicit empty array selects none. New recordings retain the current in-card selection; a configuration rebuild initializes it from the saved defaults again.
 
@@ -30,14 +32,17 @@ grid_options:
 
 ## Recording states
 
-| State     | Visible action                            | Behavior                                         |
-| --------- | ----------------------------------------- | ------------------------------------------------ |
-| Ready     | Blue microphone                           | Starts capture                                   |
-| Starting  | Microphone; preparation label after 300ms | Requests input permission and device status      |
-| Recording | Red send icon, waveform and dot           | Captures up to 60 seconds; tap to send           |
-| Recorded  | Blue send icon                            | At the limit, audio waits for explicit send      |
-| Sending   | Busy action                               | Uploads audio and awaits acceptance              |
-| Sent      | Confirmation                              | Full acceptance returns to ready after 5 seconds |
-| Error     | Retry                                     | Detailed status explains the failure             |
+| State     | Visible action                            | Behavior                                                |
+| --------- | ----------------------------------------- | ------------------------------------------------------- |
+| Ready     | Blue microphone                           | Starts capture                                          |
+| Starting  | Microphone; preparation label after 300ms | Loads the AudioWorklet and waits for input samples      |
+| Recording | Red microphone, waveform and dot          | Captures up to 60 seconds; tap to send or review        |
+| Stopping  | Busy action                               | Flushes final samples before releasing the microphone   |
+| Recorded  | Blue send icon                            | At the limit or in review mode, waits for explicit send |
+| Sending   | Busy action                               | Uploads audio and awaits acceptance                     |
+| Sent      | Confirmation                              | Full acceptance returns to ready after 5 seconds        |
+| Error     | Retry                                     | Detailed status explains the failure                    |
 
 Discard invalidates the current session, stops tracks, disconnects the audio processor, closes the audio context, clears buffers, and preserves recipient controls. Late microphone and HTTP callbacks cannot update a discarded recording.
+
+Recipients are frozen while recording and reviewing. The countdown uses captured samples. There is no fixed startup wait, stop delay, chime or silence added to normal recordings. First-sample and flush timeouts are failure deadlines, not minimum waits.

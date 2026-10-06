@@ -16,6 +16,7 @@ const context = {
   window: { removeEventListener() {} },
   document: { removeEventListener() {} },
   Blob,
+  performance: { now: () => now },
   URLSearchParams,
   setTimeout(fn, delay) {
     const key = ++id;
@@ -46,6 +47,9 @@ function advance(ms) {
 function fixture(accepted) {
   const c = new context.Card();
   c._phase = "recording";
+  c.config = {};
+  c._diagnostics = { browser_timings_ms: {} };
+  c._recorderStopped = true;
   c._session = Symbol();
   c._selection = ["one", "two"];
   c._samples = 24000;

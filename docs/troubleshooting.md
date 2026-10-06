@@ -14,6 +14,16 @@ Confirm `homecall-card.js` is registered as a JavaScript **module**, the resourc
 
 Use HTTPS, allow microphone access for this HA origin, check the OS input device, and verify another app has not blocked capture. Start with a current Chromium or Safari/WebKit browser. Browser permission errors appear in the card status.
 
+The AudioWorklet module is supplied by the integration. If the card cannot load the recorder, update the integration as well as the card and restart HA. Recording readiness follows the first input samples, not a fixed delay.
+
+## Delayed playback or missing opening words
+
+Enable **Review recording before sending** to listen to the captured WAV locally. If words are already missing there, investigate microphone startup or capture. If the preview is complete, investigate conversion or the playback route.
+
+After sending, open the status icon, expand **Diagnostics**, and use **Copy diagnostics**. Copy refreshes first-fetch timings when the trace is still available. Browser upload-request time includes network transfer, server processing and response; it is not pure upload time. HA timings identify body read, validation, conversion, per-target service calls, and time from clip creation to first audio GET. Acceptance and retrieval do not prove audible playback. Traces expire after three minutes and contain no recorded audio or bearer links.
+
+In HomeCall settings, expand a speaker and open **Playback timing test**. Compare four ascending notes starting immediately with the explicitly padded test. Only the padded diagnostic clip adds two seconds of leading silence. Neither option changes normal messages.
+
 ## No speakers or send rejected
 
 Check the integration’s speaker selection and available allowed Alexa, DLNA, Sonos, Music Assistant, Google Cast or EchoMuse entities. DLNA requires a confirmed sound test. A custom default target cannot bypass that allowlist. An empty explicit target list leaves the action unavailable until speakers are selected.
