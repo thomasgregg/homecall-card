@@ -42,13 +42,9 @@ Captured in Home Assistant using the card editor’s live preview and real micro
 
 ![HomeCall Card in a compact dashboard row and with the expanded speaker picker open](docs/assets/ui-layouts.png)
 
-Configure speaker selection, default recipients, and diagnostics in the visual editor.
+Configure recipients, diagnostics, and card size in the visual editor.
 
-![HomeCall Card visual editor options](docs/assets/ui-editor.png)
-
-Choose the card’s width and height in the Layout tab.
-
-![HomeCall Card layout editor with a larger card preview](docs/assets/ui-editor-layout.png)
+![HomeCall Card configuration and layout editor](docs/assets/ui-editor-combined.png)
 
 ## Install
 
