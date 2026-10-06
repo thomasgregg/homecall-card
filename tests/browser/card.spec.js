@@ -12,8 +12,10 @@ async function fixture(
   liveStatus = false,
   recipient = "notify.kitchen_speak",
 ) {
+  // Match the card's HA font variable to the controls' fixture font. Without
+  // this, Linux WebKit falls back from missing Roboto to wider system text.
   await page.setContent(
-    `<style>body{--primary-color:#009ac0;--error-color:#db4437;--warning-color:#ffa600;--primary-text-color:#222;--secondary-text-color:#666;--ha-font-size-m:14px;--ha-border-radius-md:8px;--ha-border-radius-lg:12px;font-family:Arial}homecall-card{display:block;width:${width}px;height:${height}px}</style><button id="toggle">Toggle picker and save</button><main></main>`,
+    `<style>body{--primary-color:#009ac0;--error-color:#db4437;--warning-color:#ffa600;--primary-text-color:#222;--secondary-text-color:#666;--ha-font-size-m:14px;--ha-border-radius-md:8px;--ha-border-radius-lg:12px;--primary-font-family:Arial,sans-serif;font-family:Arial,sans-serif}homecall-card{display:block;width:${width}px;height:${height}px}</style><button id="toggle">Toggle picker and save</button><main></main>`,
   );
   await page.evaluate(registerHomeAssistantFixtures);
   await page.addScriptTag({ content: script });
