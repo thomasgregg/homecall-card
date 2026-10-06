@@ -33,7 +33,10 @@ for (const width of [
           x.button / 2 + 2 <=
             Math.hypot(
               Math.max(0, width / 2 - x.padding - 100),
-              Math.max(0, height / 2 - x.selectorTop - 45),
+              Math.max(
+                0,
+                height / 2 - x.selectorTop - (x.compact ? 44 : 32) - 1,
+              ),
             ),
           `${width}x${height}: selector corner clearance`,
         );
@@ -45,13 +48,14 @@ for (const width of [
           x.button * 0.59 + 8 <=
             Math.hypot(
               Math.max(0, width / 2 - x.footerPadding - 1 - controlWidth),
-              Math.max(0, height - x.centerY - x.footerPadding - 1 - bottom),
+              Math.max(0, height - x.centerY - x.footerBottom - 1 - bottom),
             ),
           `${width}x${height}: outer ring clears footer hover area`,
         );
       if (x.showLabel)
         assert.ok(
-          x.centerY + x.button * 0.59 + 8 <= height - x.padding - 1 - 32,
+          x.centerY + x.button * 0.59 + (x.compact ? 8 : 12) <=
+            height - x.footerBottom - 1 - (x.compact ? 32 : 38),
           `${width}x${height}: halo clears centered footer caption`,
         );
       assert.ok(
@@ -138,7 +142,7 @@ for (const [width, height] of [
             x.button * 0.59 + 8 <=
               Math.hypot(
                 Math.max(0, width / 2 - x.footerPadding - 1 - w),
-                Math.max(0, height - x.centerY - x.footerPadding - 1 - bottom),
+                Math.max(0, height - x.centerY - x.footerBottom - 1 - bottom),
               ),
             `${width}x${height}: measured footer clearance`,
           );
@@ -172,16 +176,28 @@ const hidden = context.homeCallLayout(500, 312, false, 0, {
   borderX: 1,
   borderY: 1,
 });
-assert.equal(visible.button, 161);
+assert.equal(visible.button, 163);
 assert.equal(
   hidden.button,
-  194,
+  196,
   "Reclaim the measured free space above the action",
 );
 assert.ok(hidden.centerY < visible.centerY);
 assert.ok(
-  hidden.centerY + hidden.button * 0.59 + 8 <= 259,
+  hidden.centerY + hidden.button * 0.59 + 12 <= 265,
   "Caption retains its gap",
+);
+assert.equal(hidden.footerPadding, 20, "Preserve horizontal footer alignment");
+assert.equal(
+  hidden.footerBottom,
+  8,
+  "Reclaim only extra vertical footer padding",
+);
+assert.ok(
+  Math.abs(
+    hidden.centerY - hidden.button * 0.59 - (hidden.footerBottom + 1 + 14),
+  ) <= 3,
+  "Single-line caption and halo have balanced top and bottom insets",
 );
 console.log("Measured-card layout:", JSON.stringify({ visible, hidden }));
 console.log(

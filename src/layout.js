@@ -19,6 +19,7 @@ export function homeCallLayout(
       tiny: true,
       padding,
       footerPadding: padding,
+      footerBottom: padding,
       controlWidths: { discard: 32, time: 44 },
       edgeFooter: false,
       selectorTop: height / 2 - 16,
@@ -36,8 +37,10 @@ export function homeCallLayout(
   const padding = tiny ? 8 : compact ? 12 : 20,
     selectorTop = tiny ? 6 : compact ? 8 : 10;
   // The selector occupies the upper corner, rather than a full-width header row.
+  // Text selectors are 32px high; compact cards retain their 44px header.
+  const selectorHeight = compact ? 44 : 32;
   const cornerX = Math.max(0, width / 2 - padding - selectorWidth);
-  const cornerY = Math.max(0, height / 2 - selectorTop - 45);
+  const cornerY = Math.max(0, height / 2 - selectorTop - selectorHeight - 1);
   const cornerLimit = hasSelector
     ? 2 * Math.max(26, Math.hypot(cornerX, cornerY) - 2)
     : height - 2 * padding;
@@ -50,24 +53,6 @@ export function homeCallLayout(
     borderY: 1,
   };
   const narrow = width < 200;
-  const narrowClearance = narrow;
-  const discardHeight = narrowClearance ? 32 : 44;
-  const timerHeight = narrowClearance ? 24 : 32;
-  const footerDistance = Math.min(
-    ...[
-      [footer.discard, discardHeight],
-      [footer.time, timerHeight],
-    ].map(([w, bottom]) =>
-      Math.hypot(
-        Math.max(0, width / 2 - padding - (footer.borderX ?? 1) - w),
-        Math.max(0, height / 2 - padding - (footer.borderY ?? 1) - bottom),
-      ),
-    ),
-  );
-  const footerLimit = Math.max(
-    minimumButton,
-    (2 * (footerDistance - 8)) / 1.18,
-  );
   const labelSpace =
     2 *
     Math.max(
@@ -81,12 +66,43 @@ export function homeCallLayout(
   const showLabel = width >= 200 && height >= 220 && labelSpace >= 60;
   const edgeFooter = !hasSelector && !showLabel && compact;
   const footerPadding = edgeFooter ? 8 : padding;
+  // The native 44px footer already supplies space below its text. Reclaim
+  // the extra bottom padding on full-size caption cards, keeping side insets.
+  const balancedFooter = showLabel && !compact;
+  const footerBottom = balancedFooter ? 8 : footerPadding;
+  // A two-line caption is centered in the 44px footer: its top is 38px
+  // above the footer bottom. Leave 12px clear of the halo after rounding.
+  const captionInset = balancedFooter ? (44 + 32) / 2 : 32;
+  const captionGap = balancedFooter ? 12.5 : 8;
+  const narrowClearance = narrow;
+  const discardHeight = narrowClearance ? 32 : 44;
+  const timerHeight = narrowClearance ? 24 : 32;
+  const footerDistance = Math.min(
+    ...[
+      [footer.discard, discardHeight],
+      [footer.time, timerHeight],
+    ].map(([w, bottom]) =>
+      Math.hypot(
+        Math.max(0, width / 2 - padding - (footer.borderX ?? 1) - w),
+        Math.max(0, height / 2 - footerBottom - (footer.borderY ?? 1) - bottom),
+      ),
+    ),
+  );
+  const footerLimit = Math.max(
+    minimumButton,
+    (2 * (footerDistance - 8)) / 1.18,
+  );
   const controlWidths = {
     discard: narrowClearance ? 32 : footer.discard,
     time: footer.time - (edgeFooter ? 13 : 0),
   };
   const labelLimit = showLabel
-    ? (height / 2 - padding - (footer.borderY ?? 1) - 32 - 8) / 0.59
+    ? (height / 2 -
+        footerBottom -
+        (footer.borderY ?? 1) -
+        captionInset -
+        captionGap) /
+      0.59
     : Infinity;
   let button = Math.floor(
     Math.max(
@@ -123,7 +139,12 @@ export function homeCallLayout(
       if (showLabel)
         maximumY = Math.min(
           maximumY,
-          height - padding - borderY - 32 - clearance - radius,
+          height -
+            footerBottom -
+            borderY -
+            captionInset -
+            Math.max(8.5, captionGap) -
+            radius,
         );
       for (const [controlWidth, controlHeight] of [
         [controlWidths.discard, discardHeight],
@@ -137,7 +158,7 @@ export function homeCallLayout(
           maximumY = Math.min(
             maximumY,
             height -
-              footerPadding -
+              footerBottom -
               borderY -
               controlHeight -
               Math.sqrt((radius + clearance) ** 2 - distanceX ** 2),
@@ -183,6 +204,7 @@ export function homeCallLayout(
     tiny,
     padding,
     footerPadding,
+    footerBottom,
     controlWidths,
     edgeFooter,
     selectorTop,

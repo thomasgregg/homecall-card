@@ -27,12 +27,13 @@ grid_options:
 
 ## Layout rules
 
-- Cards below 120px high use a horizontal layout: the action, discard, and speaker icons share the vertical centerline, with the timer below the speaker. The action is up to 36px across; the waveform stays between the side controls. Speaker selection opens in a viewport-bounded popover outside the card. Existing native icons, controls, theme colors, fonts, and countdown behavior are reused.
+- Cards below 120px high use a horizontal layout: the action and discard share the vertical centerline. The speaker is centered alone when the timer is hidden; when visible, the speaker icon and timer form a centered group with a clear gap. With no picker, the timer and recording dot are centered vertically. The action is up to 36px across; the waveform stays between the side controls. Speaker selection opens in a viewport-bounded popover outside the card. Existing native icons, controls, theme colors, fonts, and countdown behavior are reused.
 - Taller cards keep the existing layout. Their action diameter stays within 52–240px and scales with available width and height.
-- With a picker, the action clears the selector's upper corner.
+- With a picker, the action clears the selector's upper corner using its actual height: 32px for the text selector and 44px for the compact header.
 - With no picker and no caption, the action stays vertically centered.
 - A caption appears only when the center footer slot has enough room. With no picker and a visible caption, the action may move upward to use available space.
 - Captions share Home Assistant's standard caption font size in every state and wrap to at most two lines in the existing footer slot. Long actions use concise captions while their full descriptions remain available to assistive technology and in the button tooltip. Compact cards use the spinner and recording indicators when there is no caption slot.
+- Full-size caption cards use an 8px bottom footer inset while retaining their top and side padding and native 44px footer touch areas. The halo leaves at least 12px above a two-line caption.
 - Compact icon-only cards keep footer controls inset by 8px plus the card border. Their timer omits the additional end inset used on larger cards.
 - The full decorative halo reserves at least 8px clearance from delete and timer rectangles, even while those controls are hidden. This keeps size and position stable during recording.
 - A 120px-high two-row card reserves the same footer clearance below and above 200px wide. Its circle grows with the available width instead of shrinking when dashboard edit mode changes the card width slightly. Padding and footer alignment stay unchanged.

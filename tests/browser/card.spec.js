@@ -244,6 +244,98 @@ for (const language of ["en", "de"]) {
     });
   }
 }
+for (const language of ["en", "de"]) {
+  for (const picker of [false, true]) {
+    test(`caption footer stays balanced through window resizing in ${language}, picker ${picker}`, async ({
+      page,
+    }) => {
+      await fixture(page, 500, 312);
+      if (picker) await page.locator("#toggle").click();
+      await page.locator("homecall-card").evaluate((c, language) => {
+        c._lang = language;
+        c.style.width = "calc(100vw - 64px)";
+        c.style.height = "calc(100vh - 64px)";
+      }, language);
+      // Exercise the observer in both directions, including a return from
+      // compact/icon-only layouts to the full-size caption footer.
+      for (const [width, height] of [
+        [500, 312],
+        [376, 312],
+        [470, 376],
+        [246, 184],
+        [172, 120],
+        [376, 312],
+      ]) {
+        await page.setViewportSize({ width: width + 64, height: height + 64 });
+        await page.evaluate(
+          () =>
+            new Promise((resolve) =>
+              requestAnimationFrame(() => requestAnimationFrame(resolve)),
+            ),
+        );
+        const idle = await geometry(page);
+        expect(idle.cardWidth).toBe(width);
+        expect(idle.cardHeight).toBe(height);
+        for (const phase of [
+          "ready",
+          "starting",
+          "recording",
+          "recorded",
+          "stopping",
+          "sending",
+        ]) {
+          const result = await page
+            .locator("homecall-card")
+            .evaluate((c, phase) => {
+              c._phase = phase;
+              c._button(phase === "ready" ? "Mikrofon starten" : "Senden");
+              c._syncPhase();
+              const q = (selector) => c.shadowRoot.querySelector(selector);
+              const rect = (selector) => q(selector).getBoundingClientRect();
+              const card = rect("ha-card"),
+                halo = rect(".halo"),
+                caption = rect(".action-label"),
+                footer = rect(".info");
+              return {
+                size: rect(".main").width,
+                top: halo.top - card.top,
+                bottom: card.bottom - caption.bottom,
+                captionGap: caption.top - halo.bottom,
+                captionVisible: !q(".action-label").hidden,
+                captionLines: caption.height / 16,
+                footerBottom: card.bottom - footer.bottom,
+                footerLeft: footer.left - card.left,
+                footerHeight: footer.height,
+                discardHeight: rect(".discard").height,
+              };
+            }, phase);
+          expect(result.size).toBe(idle.size);
+          if (width >= 376) {
+            expect(result.captionVisible).toBe(true);
+            expect(result.captionGap).toBeGreaterThanOrEqual(12);
+            expect(result.top).toBeGreaterThanOrEqual(20);
+            expect(result.footerBottom).toBe(9);
+            expect(result.footerLeft).toBe(21);
+            expect(result.footerHeight).toBe(44);
+            if (phase === "recording") expect(result.discardHeight).toBe(44);
+            if (!picker && height === 312 && result.captionLines === 1)
+              expect(Math.abs(result.top - result.bottom)).toBeLessThanOrEqual(
+                3,
+              );
+          } else {
+            expect(result.captionVisible).toBe(false);
+            expect(result.footerBottom).toBe(9);
+          }
+          const current = await geometry(page);
+          if (current.discardGap !== null)
+            expect(current.discardGap).toBeGreaterThanOrEqual(8);
+          if (current.timerGap !== null)
+            expect(current.timerGap).toBeGreaterThanOrEqual(8);
+        }
+      }
+    });
+  }
+}
 for (const width of [174, 177.5, 215, 231]) {
   test(`saved selector cycles restore mounted size at ${width}×184`, async ({
     page,
@@ -1420,7 +1512,7 @@ for (const interruptedBy of ["microphone", "context"]) {
 }
 
 for (const width of [160, 177.5, 246, 376]) {
-  test(`one-row controls stay centered and timer sits below speaker at ${width}px`, async ({
+  test(`one-row controls stay centered and speaker/timer share the center at ${width}px`, async ({
     page,
   }) => {
     await fixture(page, width, 56);
@@ -1463,6 +1555,7 @@ for (const width of [160, 177.5, 246, 376]) {
               }
             : null,
           pickerBottom: picker.bottom,
+          pickerTop: picker.top,
           pickerCenterX: picker.left + picker.width / 2,
           bottom: card.bottom,
           waveLeft: wave.left,
@@ -1474,10 +1567,11 @@ for (const width of [160, 177.5, 246, 376]) {
       });
       expect(g.height).toBe(56);
       expect(g.main).toBeCloseTo(g.center, 1);
-      expect(g.picker).toBeCloseTo(g.center, 1);
+      if (!g.time) expect(g.picker).toBeCloseTo(g.center, 1);
       if (g.trash !== null) expect(g.trash).toBeCloseTo(g.center, 1);
       if (g.time) {
-        expect(g.time.top).toBeGreaterThan(g.picker - 1);
+        expect((g.pickerTop + g.time.bottom) / 2).toBeCloseTo(g.center - 3, 1);
+        expect(g.time.top).toBeGreaterThanOrEqual(g.pickerBottom);
         expect(g.time.bottom).toBeLessThanOrEqual(g.bottom);
         expect(g.time.cx).toBeCloseTo(g.pickerCenterX, 1);
       }
@@ -1499,62 +1593,121 @@ for (const width of [160, 177.5, 246, 376]) {
   });
 }
 
-for (const selector of [true, false]) {
-  test(`one-row countdown digits and recording dot align with selector ${selector}`, async ({
-    page,
-  }) => {
-    await fixture(page, 246, 56);
-    if (selector) await page.locator("#toggle").click();
-    await page.locator("homecall-card").evaluate((c) => {
-      c._phase = "starting";
-      c._syncPhase();
-    });
-    await expect(page.locator("homecall-card .time")).toBeHidden();
-    for (const phase of ["recording", "recorded"]) {
-      const geometry = await page
-        .locator("homecall-card")
-        .evaluate((c, phase) => {
-          c._phase = phase;
-          c._view.querySelector(".time").textContent = "0:43";
-          c._syncPhase();
-          const time = c._view.querySelector(".time");
-          const range = document.createRange();
-          range.selectNodeContents(time);
-          const digits = range.getBoundingClientRect();
-          const card = c._view.getBoundingClientRect();
-          const timer = time.getBoundingClientRect();
-          const speaker = c._view
-            .querySelector("summary")
-            .getBoundingClientRect();
-          const dot = getComputedStyle(time, "::before");
-          return {
-            digitX: digits.x + digits.width / 2,
-            digitY: digits.y + digits.height / 2,
-            timerX: timer.x + timer.width / 2,
-            timerY: timer.y + timer.height / 2,
-            speakerX: speaker.x + speaker.width / 2,
-            cardY: card.y + card.height / 2,
-            dotPosition: dot.position,
-            dotTop: parseFloat(dot.top),
-            timerHeight: timer.height,
-            waveformRight: c._view
-              .querySelector(".wave")
-              .getBoundingClientRect().right,
-            timerLeft: timer.left,
-          };
-        }, phase);
-      expect(geometry.digitX).toBeCloseTo(geometry.timerX, 1);
-      if (selector) expect(geometry.digitX).toBeCloseTo(geometry.speakerX, 1);
-      else expect(geometry.timerY).toBeCloseTo(geometry.cardY, 1);
-      if (phase === "recording") {
-        expect(
-          geometry.timerLeft - geometry.waveformRight,
-        ).toBeGreaterThanOrEqual(12);
-        expect(geometry.dotPosition).toBe("absolute");
-        expect(geometry.dotTop).toBeCloseTo(geometry.timerHeight / 2, 1);
+for (const width of [160, 177.5, 246, 376]) {
+  for (const selector of [true, false]) {
+    test(`one-row speaker/timer group centers at ${width}px with selector ${selector}`, async ({
+      page,
+    }) => {
+      await fixture(page, width, 56);
+      if (selector) await page.locator("#toggle").click();
+      await page.locator("homecall-card").evaluate((c) => {
+        c._phase = "starting";
+        c._syncPhase();
+      });
+      await expect(page.locator("homecall-card .time")).toBeHidden();
+      for (const phase of ["recording", "recorded"]) {
+        const geometry = await page
+          .locator("homecall-card")
+          .evaluate((c, phase) => {
+            c._phase = phase;
+            c._view.querySelector(".time").textContent = "0:43";
+            c._syncPhase();
+            const time = c._view.querySelector(".time");
+            const range = document.createRange();
+            range.selectNodeContents(time);
+            const digits = range.getBoundingClientRect();
+            const card = c._view.getBoundingClientRect();
+            const timer = time.getBoundingClientRect();
+            const speaker = c._view
+              .querySelector("summary")
+              .getBoundingClientRect();
+            const speakerIcon = c._view
+              .querySelector(".speaker-icon")
+              .getBoundingClientRect();
+            const mic = c._view.querySelector(".main").getBoundingClientRect();
+            const discard = c._view
+              .querySelector(".discard")
+              .getBoundingClientRect();
+            const dot = getComputedStyle(time, "::before");
+            return {
+              digitX: digits.x + digits.width / 2,
+              digitY: digits.y + digits.height / 2,
+              timerX: timer.x + timer.width / 2,
+              timerY: timer.y + timer.height / 2,
+              speakerX: speaker.x + speaker.width / 2,
+              groupY: (speaker.top + timer.bottom) / 2,
+              visibleGroupY: (speakerIcon.top + timer.bottom) / 2,
+              controlGap: timer.top - speaker.bottom,
+              iconGap: timer.top - speakerIcon.bottom,
+              topInset: speakerIcon.top - card.top,
+              hitAreaTopInset: speaker.top - card.top,
+              bottomInset: card.bottom - timer.bottom,
+              micY: mic.y + mic.height / 2,
+              discardY: discard.height ? discard.y + discard.height / 2 : null,
+              cardY: card.y + card.height / 2,
+              dotPosition: dot.position,
+              dotTop: parseFloat(dot.top),
+              timerHeight: timer.height,
+              waveformRight: c._view
+                .querySelector(".wave")
+                .getBoundingClientRect().right,
+              timerLeft: timer.left,
+            };
+          }, phase);
+        expect(geometry.digitX).toBeCloseTo(geometry.timerX, 1);
+        if (selector) {
+          expect(geometry.digitX).toBeCloseTo(geometry.speakerX, 1);
+          expect(geometry.groupY).toBeCloseTo(geometry.cardY - 3, 1);
+          expect(
+            Math.abs(geometry.visibleGroupY - geometry.cardY),
+          ).toBeLessThanOrEqual(0.5);
+          expect(geometry.controlGap).toBeGreaterThanOrEqual(0);
+          expect(geometry.iconGap).toBeGreaterThanOrEqual(5);
+          expect(
+            Math.abs(geometry.topInset - geometry.bottomInset),
+          ).toBeLessThanOrEqual(1);
+          expect(geometry.hitAreaTopInset).toBeGreaterThanOrEqual(2);
+          expect(geometry.bottomInset).toBeGreaterThanOrEqual(8);
+        } else expect(geometry.timerY).toBeCloseTo(geometry.cardY, 1);
+        expect(geometry.micY).toBeCloseTo(geometry.cardY, 1);
+        expect(geometry.discardY).toBeCloseTo(geometry.cardY, 1);
+        if (phase === "recording") {
+          expect(
+            geometry.timerLeft - geometry.waveformRight,
+          ).toBeGreaterThanOrEqual(12);
+          expect(geometry.dotPosition).toBe("absolute");
+          expect(geometry.dotTop).toBeCloseTo(geometry.timerHeight / 2, 1);
+        }
       }
-    }
-  });
+      for (const phase of [
+        "stopping",
+        "sending",
+        "sent",
+        "error",
+        "ready",
+        "starting",
+      ]) {
+        await page.locator("homecall-card").evaluate((c, phase) => {
+          c._phase = phase;
+          c._syncPhase();
+        }, phase);
+        await expect(page.locator("homecall-card .time")).toBeHidden();
+        if (selector) {
+          const center = await page.locator("homecall-card").evaluate((c) => {
+            const box = (selector) =>
+              c.shadowRoot.querySelector(selector).getBoundingClientRect();
+            const speaker = box("summary"),
+              mic = box(".main");
+            return {
+              speakerY: speaker.y + speaker.height / 2,
+              micY: mic.y + mic.height / 2,
+            };
+          });
+          expect(center.speakerY).toBeCloseTo(center.micY, 1);
+        }
+      }
+    });
+  }
 }
 
 for (const language of ["en", "de"]) {

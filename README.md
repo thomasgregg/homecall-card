@@ -46,7 +46,7 @@ View the full-size captures: [ready](docs/assets/ui-expanded-ready.png), [record
 
 ## Install
 
-First install and configure the [HomeCall integration](https://github.com/thomasgregg/homecall) **1.7.0 or newer**. HomeCall Card 1.3.0 uses the recorder module supplied by that integration. If your integration is older, update it first and restart Home Assistant. If you already have 1.7.0 or newer, this card update needs only a dashboard refresh. Use Home Assistant 2026.9 or newer and open the dashboard through HTTPS.
+First install and configure the [HomeCall integration](https://github.com/thomasgregg/homecall) **1.7.0 or newer**. HomeCall Card 1.3.1 uses the recorder module supplied by that integration. If your integration is older, update it first and restart Home Assistant. If you already have 1.7.0 or newer, this card update needs only a dashboard refresh. Use Home Assistant 2026.9 or newer and open the dashboard through HTTPS.
 
 **HTTPS is required for microphone recording.** Browsers only allow microphone access from a secure page, so a dashboard opened at an ordinary HTTP address such as `http://192.168.1.10:8123` cannot record voice messages, even if you allow microphone permission. Open Home Assistant using a trusted HTTPS address, either on your local network or through an existing remote-access connection. You do not need to expose Home Assistant publicly. See the [browser microphone requirements](https://developer.mozilla.org/en-US/docs/Web/API/MediaDevices/getUserMedia#privacy_and_security).
 
@@ -114,9 +114,9 @@ Defaults never bypass the integration's allowlist. Hiding the picker also hides 
 
 In a **Sections** dashboard, HomeCall defaults to **6 columns × 1 row** (half a section wide). The minimum supported height is **56px**. Set the size in the card editor's **Layout** tab, or use `grid_options` as above. Existing cards keep their saved dimensions until you resize them.
 
-At **1 row**, the microphone, discard icon, and speaker icon sit at the card's middle height. The countdown digits are centered below the speaker; when the speaker picker is hidden, the countdown and recording dot move to middle height. The waveform leaves space around the side controls. Speaker selection and longer status messages open in popovers outside the short card.
+At **1 row**, the microphone and discard icon sit at the card's middle height. The speaker icon is centered on its own until the countdown appears; then the visible icon and countdown form a centered group with a clear gap between them. When the speaker picker is hidden, the countdown and recording dot sit at middle height. The waveform leaves space around the side controls. Speaker selection and longer status messages open in popovers outside the short card.
 
-At **2 rows or more**, the card retains its taller layout, with the picker above and recording controls below. The main action scales to the available space; captions appear when there is enough room. These layouts use the same Home Assistant icons, fonts, controls, and theme colors.
+At **2 rows or more**, the card retains its taller layout, with the picker above and recording controls below. The text speaker selector uses a slimmer touch area. The main action scales to the available space; captions appear when there is enough room, with balanced bottom spacing and clearance for two lines. These layouts use the same Home Assistant icons, fonts, controls, and theme colors.
 
 The circle keeps the same diameter through preparation and recording for a given card size. It scales with the actual available space, so the editor preview and dashboard can differ when their widths differ. Two-row cards retain footer clearance through the 200px width boundary; window resizing preserves timer and discard alignment.
 

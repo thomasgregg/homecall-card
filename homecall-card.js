@@ -1,4 +1,4 @@
-/*! HomeCall Card v1.3.0 | MIT License | github.com/thomasgregg/homecall-card */
+/*! HomeCall Card v1.3.1 | MIT License | github.com/thomasgregg/homecall-card */
 (() => {
   // src/layout.js
   function homeCallLayout(width, height, hasSelector = true, selectorWidth = 100, footerWidths = null) {
@@ -14,6 +14,7 @@
         tiny: true,
         padding: padding2,
         footerPadding: padding2,
+        footerBottom: padding2,
         controlWidths: { discard: 32, time: 44 },
         edgeFooter: false,
         selectorTop: height / 2 - 16,
@@ -28,8 +29,9 @@
     const minimumButton = height <= 120 ? 24 : 52;
     const compact = width < 280 || height < 240, tiny = width < 200 || height < 200;
     const padding = tiny ? 8 : compact ? 12 : 20, selectorTop = tiny ? 6 : compact ? 8 : 10;
+    const selectorHeight = compact ? 44 : 32;
     const cornerX = Math.max(0, width / 2 - padding - selectorWidth);
-    const cornerY = Math.max(0, height / 2 - selectorTop - 45);
+    const cornerY = Math.max(0, height / 2 - selectorTop - selectorHeight - 1);
     const cornerLimit = hasSelector ? 2 * Math.max(26, Math.hypot(cornerX, cornerY) - 2) : height - 2 * padding;
     const footer = footerWidths || {
       discard: compact ? 46 : 122,
@@ -38,6 +40,17 @@
       borderY: 1
     };
     const narrow = width < 200;
+    const labelSpace = 2 * Math.max(
+      0,
+      width / 2 - padding - (footer.borderX ?? 1) - Math.max(footer.discard, footer.time) - 8
+    );
+    const showLabel = width >= 200 && height >= 220 && labelSpace >= 60;
+    const edgeFooter = !hasSelector && !showLabel && compact;
+    const footerPadding = edgeFooter ? 8 : padding;
+    const balancedFooter = showLabel && !compact;
+    const footerBottom = balancedFooter ? 8 : footerPadding;
+    const captionInset = balancedFooter ? (44 + 32) / 2 : 32;
+    const captionGap = balancedFooter ? 12.5 : 8;
     const narrowClearance = narrow;
     const discardHeight = narrowClearance ? 32 : 44;
     const timerHeight = narrowClearance ? 24 : 32;
@@ -48,7 +61,7 @@
       ].map(
         ([w, bottom]) => Math.hypot(
           Math.max(0, width / 2 - padding - (footer.borderX ?? 1) - w),
-          Math.max(0, height / 2 - padding - (footer.borderY ?? 1) - bottom)
+          Math.max(0, height / 2 - footerBottom - (footer.borderY ?? 1) - bottom)
         )
       )
     );
@@ -56,18 +69,11 @@
       minimumButton,
       2 * (footerDistance - 8) / 1.18
     );
-    const labelSpace = 2 * Math.max(
-      0,
-      width / 2 - padding - (footer.borderX ?? 1) - Math.max(footer.discard, footer.time) - 8
-    );
-    const showLabel = width >= 200 && height >= 220 && labelSpace >= 60;
-    const edgeFooter = !hasSelector && !showLabel && compact;
-    const footerPadding = edgeFooter ? 8 : padding;
     const controlWidths = {
       discard: narrowClearance ? 32 : footer.discard,
       time: footer.time - (edgeFooter ? 13 : 0)
     };
-    const labelLimit = showLabel ? (height / 2 - padding - (footer.borderY ?? 1) - 32 - 8) / 0.59 : Infinity;
+    const labelLimit = showLabel ? (height / 2 - footerBottom - (footer.borderY ?? 1) - captionInset - captionGap) / 0.59 : Infinity;
     let button = Math.floor(
       Math.max(
         minimumButton,
@@ -99,7 +105,7 @@
         if (showLabel)
           maximumY = Math.min(
             maximumY,
-            height - padding - borderY - 32 - clearance - radius
+            height - footerBottom - borderY - captionInset - Math.max(8.5, captionGap) - radius
           );
         for (const [controlWidth, controlHeight] of [
           [controlWidths.discard, discardHeight],
@@ -112,7 +118,7 @@
           if (distanceX < radius + clearance)
             maximumY = Math.min(
               maximumY,
-              height - footerPadding - borderY - controlHeight - Math.sqrt((radius + clearance) ** 2 - distanceX ** 2)
+              height - footerBottom - borderY - controlHeight - Math.sqrt((radius + clearance) ** 2 - distanceX ** 2)
             );
         }
         if (minimumY <= maximumY && (showLabel || minimumY <= height / 2 && maximumY >= height / 2)) {
@@ -144,6 +150,7 @@
       tiny,
       padding,
       footerPadding,
+      footerBottom,
       controlWidths,
       edgeFooter,
       selectorTop,
@@ -472,16 +479,17 @@
       this.shadowRoot.innerHTML = `<style>
 :host{display:block;height:100%;min-width:0;font-family:var(--primary-font-family,Roboto,sans-serif);--homecall-button-size:112px;--homecall-icon-size:63px;--homecall-padding:20px;--homecall-selector-top:10px;--homecall-content-inset:13px;--homecall-control-size:44px;--homecall-control-radius:var(--ha-border-radius-md)}
 ha-card{display:flex;position:relative;flex-direction:column;box-sizing:border-box;height:100%;min-height:56px;min-width:0;padding:var(--homecall-padding);color:var(--primary-text-color);--homecall-tone:var(--ha-color-fill-primary-loud-resting,var(--primary-color))}
-ha-card[data-tone="red"]{--homecall-tone:var(--ha-color-fill-danger-loud-resting,var(--error-color))}[hidden]{display:none!important}.header{display:flex;align-items:center;justify-content:space-between;gap:12px;min-height:44px;position:absolute;top:var(--homecall-selector-top);inset-inline:var(--homecall-padding);z-index:2;pointer-events:none}
-.targets{margin:0 0 0 auto;max-width:100%;flex:none;pointer-events:auto;color:var(--secondary-text-color);font-size:var(--ha-font-size-m)}.targets summary{display:flex;align-items:center;justify-content:flex-end;gap:4px;cursor:pointer;list-style:none;min-height:44px;min-width:44px;max-width:100%;border-radius:var(--homecall-control-radius);padding-inline:6px;margin-inline-end:calc(var(--homecall-content-inset) - 6px);-webkit-tap-highlight-color:transparent}.targets summary span{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.targets summary::-webkit-details-marker{display:none}.targets summary:focus-visible{outline:2px solid var(--ha-color-focus);outline-offset:2px}.targets summary ha-icon{--mdc-icon-size:18px;flex:none}.targets .speaker-icon{display:none}.targets[open] .chevron{transform:rotate(180deg)}.targets summary[aria-disabled="true"]{color:var(--disabled-text-color);cursor:default}
+ha-card[data-tone="red"]{--homecall-tone:var(--ha-color-fill-danger-loud-resting,var(--error-color))}[hidden]{display:none!important}.header{display:flex;align-items:center;justify-content:space-between;gap:12px;min-height:32px;position:absolute;top:var(--homecall-selector-top);inset-inline:var(--homecall-padding);z-index:2;pointer-events:none}
+.targets{margin:0 0 0 auto;max-width:100%;flex:none;pointer-events:auto;color:var(--secondary-text-color);font-size:var(--ha-font-size-m)}.targets summary{display:flex;align-items:center;justify-content:flex-end;gap:4px;cursor:pointer;list-style:none;min-height:32px;min-width:44px;max-width:100%;border-radius:var(--homecall-control-radius);padding-inline:6px;margin-inline-end:calc(var(--homecall-content-inset) - 6px);-webkit-tap-highlight-color:transparent}.targets summary span{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.targets summary::-webkit-details-marker{display:none}.targets summary:focus-visible{outline:2px solid var(--ha-color-focus);outline-offset:2px}.targets summary ha-icon{--mdc-icon-size:18px;flex:none}.targets .speaker-icon{display:none}.targets[open] .chevron{transform:rotate(180deg)}.targets summary[aria-disabled="true"]{color:var(--disabled-text-color);cursor:default}
 .list,.status-popover{position:fixed;inset:auto;margin:0;box-sizing:border-box;color:var(--primary-text-color);font:var(--ha-font-size-m)/var(--ha-line-height-normal) var(--primary-font-family,Roboto,sans-serif);padding:8px 12px;overflow:auto;overscroll-behavior:contain;background:var(--ha-card-background,var(--card-background-color));border:1px solid var(--divider-color);border-radius:var(--ha-border-radius-lg);box-shadow:var(--ha-box-shadow-l)}.list{overflow-x:hidden}.status-popover{padding:16px;overflow-wrap:anywhere}.list ha-checkbox.all{display:flex;min-height:44px;border-bottom:1px solid var(--divider-color);margin-bottom:4px;padding-bottom:4px}
 .action{display:flex;position:absolute;inset:0;pointer-events:none;flex-direction:column;align-items:center;justify-content:center}.visual{transform:translateY(var(--homecall-action-offset,0px));position:relative;display:flex;align-items:center;justify-content:center;width:calc(100% - 2*var(--homecall-padding));height:var(--homecall-visual-height,calc(var(--homecall-button-size)*1.44));max-height:calc(100% - 2*var(--homecall-padding));flex:none;isolation:isolate}.halo{position:absolute;width:calc(var(--homecall-button-size)*1.18);height:calc(var(--homecall-button-size)*1.18);border-radius:50%;background:var(--homecall-tone);opacity:.18;pointer-events:none;z-index:-1}.wave{position:absolute;inset:0;width:100%;height:100%;opacity:0;pointer-events:none;z-index:-2}ha-card[data-phase="recording"] .wave,ha-card[data-phase="recorded"] .wave{opacity:.24}
 ha-card[data-phase="starting"] .halo{opacity:.08}ha-card[data-phase="recording"] .halo{opacity:1;background:none;mask:radial-gradient(circle,transparent 60%,black 61%)}ha-card[data-phase="recording"] .halo::before,ha-card[data-phase="recording"] .halo::after{content:"";position:absolute;inset:0;border-radius:inherit}ha-card[data-phase="recording"] .halo::before{background:var(--homecall-tone);opacity:.16}ha-card[data-phase="recording"] .halo::after{background:conic-gradient(var(--homecall-tone) var(--homecall-recording-progress,0deg),transparent 0);opacity:.46}
 .main{pointer-events:auto;--ha-button-height:var(--homecall-button-size);--ha-button-border-radius:50%;--ha-button-box-shadow:none;flex:none}.main::part(base){width:var(--homecall-button-size);padding:0}.main::part(label){display:flex;align-items:center;justify-content:center}.main::part(spinner){font-size:var(--homecall-icon-size)}.main ha-icon{--mdc-icon-size:var(--homecall-icon-size)}.main[data-kind="send-outline"] ha-icon{--mdc-icon-size:calc(var(--homecall-icon-size)*.75)}.action-label{position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);font-size:var(--ha-font-size-m);font-weight:var(--ha-font-weight-medium,500);line-height:16px;max-width:var(--homecall-label-space);text-align:center;color:var(--primary-text-color);white-space:normal;flex:none}
 ha-card[data-edge-footer="true"] .info{bottom:8px;inset-inline:8px}ha-card[data-edge-footer="true"] .time{padding-inline-end:0}
 ha-card[data-narrow="true"] .info{height:32px;min-height:32px;align-items:flex-end}ha-card[data-narrow="true"] .discard{--ha-button-height:32px}ha-card[data-narrow="true"] .discard::part(base){min-width:32px;padding:0 5px}ha-card[data-narrow="true"] .time{font-size:12px;line-height:24px;gap:6px}
-.info{display:flex;position:absolute;bottom:var(--homecall-padding);inset-inline:var(--homecall-padding);pointer-events:none;align-items:center;justify-content:space-between;gap:8px;height:44px;min-height:44px;flex:none;color:var(--secondary-text-color);font-size:var(--ha-font-size-m);line-height:20px}.discard{pointer-events:auto;--ha-button-height:44px;--ha-button-border-radius:var(--homecall-control-radius);--ha-button-box-shadow:none;flex:none}.discard::part(base){padding:0 12px;min-width:44px}.discard::part(label){display:flex;align-items:center;gap:8px;font-size:var(--ha-font-size-m);font-weight:400;line-height:20px}.discard ha-icon{--mdc-icon-size:20px}.message-control{display:flex;align-items:center;justify-content:center;min-width:0;gap:4px}.status{line-height:20px;overflow:hidden;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow-wrap:anywhere}.status-more{pointer-events:auto;flex:none;color:var(--secondary-text-color)}ha-card[data-phase="error"] .status-more ha-icon{color:var(--error-color)}ha-card[data-phase="sent"] .status-more ha-icon{color:var(--success-color)}ha-card[data-phase="ready"][data-skipped-targets="true"] .status-more ha-icon,ha-card[data-phase="sent"][data-partial-send="true"] .status-more ha-icon{color:var(--warning-color,var(--error-color))}.time{display:flex;align-items:center;gap:8px;margin-inline-start:auto;padding-inline-end:var(--homecall-content-inset);white-space:nowrap;font-variant-numeric:tabular-nums}ha-card[data-phase="recording"] .time:before{content:'';display:block;width:8px;height:8px;flex:none;border-radius:50%;background:var(--ha-color-fill-danger-loud-resting,var(--error-color))}
+.info{display:flex;position:absolute;bottom:var(--homecall-footer-bottom,var(--homecall-padding));inset-inline:var(--homecall-padding);pointer-events:none;align-items:center;justify-content:space-between;gap:8px;height:44px;min-height:44px;flex:none;color:var(--secondary-text-color);font-size:var(--ha-font-size-m);line-height:20px}.discard{pointer-events:auto;--ha-button-height:44px;--ha-button-border-radius:var(--homecall-control-radius);--ha-button-box-shadow:none;flex:none}.discard::part(base){padding:0 12px;min-width:44px}.discard::part(label){display:flex;align-items:center;gap:8px;font-size:var(--ha-font-size-m);font-weight:400;line-height:20px}.discard ha-icon{--mdc-icon-size:20px}.message-control{display:flex;align-items:center;justify-content:center;min-width:0;gap:4px}.status{line-height:20px;overflow:hidden;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow-wrap:anywhere}.status-more{pointer-events:auto;flex:none;color:var(--secondary-text-color)}ha-card[data-phase="error"] .status-more ha-icon{color:var(--error-color)}ha-card[data-phase="sent"] .status-more ha-icon{color:var(--success-color)}ha-card[data-phase="ready"][data-skipped-targets="true"] .status-more ha-icon,ha-card[data-phase="sent"][data-partial-send="true"] .status-more ha-icon{color:var(--warning-color,var(--error-color))}.time{display:flex;align-items:center;gap:8px;margin-inline-start:auto;padding-inline-end:var(--homecall-content-inset);white-space:nowrap;font-variant-numeric:tabular-nums}ha-card[data-phase="recording"] .time:before{content:'';display:block;width:8px;height:8px;flex:none;border-radius:50%;background:var(--ha-color-fill-danger-loud-resting,var(--error-color))}
 .sr-only{position:absolute!important;width:1px!important;height:1px!important;padding:0!important;margin:-1px!important;overflow:hidden!important;clip:rect(0,0,0,0)!important;white-space:nowrap!important;border:0!important}
+ha-card[data-compact="true"] .header{min-height:44px}
 ha-card[data-compact="true"] .targets summary{justify-content:center;margin-inline-end:calc(var(--homecall-content-inset) - 11px);padding-inline:0}ha-card[data-compact="true"] .targets summary span,ha-card[data-compact="true"] .targets .chevron{display:none}ha-card[data-compact="true"] .targets .speaker-icon{display:block;--mdc-icon-size:22px}ha-card[data-compact="true"] .discard .discard-label{display:none}ha-card[data-compact="true"] .message-control{gap:0}
 ha-card[data-narrow="true"]{--homecall-control-size:32px}
 ha-card[data-compact="true"] .targets summary{box-sizing:border-box;width:var(--homecall-control-size);height:var(--homecall-control-size);min-width:var(--homecall-control-size);min-height:var(--homecall-control-size)}
@@ -490,13 +498,16 @@ ha-card[data-compact="true"] .discard::part(base),.status-more::part(base){box-s
 /* In a one-row card, side icons share the action's vertical centerline. */
 ha-card[data-short="true"]{--homecall-control-size:32px}
 ha-card[data-short="true"] .header{top:calc(50% - 16px);min-height:32px;height:32px}
+/* Lift the speaker/timer pair 3px to balance the visible artwork and text,
+   rather than the speaker's padded 32px hit area. Their hit areas stay separate. */
+ha-card[data-short="true"]:has(.time:not([hidden])) .header{top:calc(50% - 26px)}
 ha-card[data-short="true"] .targets summary{margin-inline-end:6px}
 ha-card[data-short="true"] .visual{width:calc(100% - 100px)}
 ha-card[data-short="true"] .wave{width:calc(100% - 12px);inset-inline-start:0;inset-inline-end:12px}
 ha-card[data-short="true"] .info{inset:0 var(--homecall-padding);height:100%;min-height:0}
 ha-card[data-short="true"] .discard,ha-card[data-short="true"] .message-control{position:absolute;inset-inline-start:6px;top:calc(50% - 16px);height:32px}
 ha-card[data-short="true"] .discard{--ha-button-height:32px}
-ha-card[data-short="true"] .time{position:absolute;inset-inline-end:0;top:calc(50% + 11px);width:44px;height:14px;justify-content:center;margin:0;padding:0;font-size:var(--ha-font-size-s,12px);line-height:14px;gap:4px}
+ha-card[data-short="true"] .time{position:absolute;inset-inline-end:0;top:calc(50% + 6px);width:44px;height:14px;justify-content:center;margin:0;padding:0;font-size:var(--ha-font-size-s,12px);line-height:14px;gap:4px}
 ha-card[data-short="true"] .time:before{position:absolute;inset-inline-start:0;top:50%;transform:translateY(-50%);width:6px;height:6px}
 ha-card[data-short="true"]:has(.header[hidden]) .time{top:calc(50% - 7px)}
 @media(hover:hover){.targets summary:hover{background:var(--ha-color-fill-neutral-quiet-hover)}}
@@ -636,6 +647,10 @@ ha-card[data-short="true"]:has(.header[hidden]) .time{top:calc(50% - 7px)}
       this._layout = layout;
       this._view.dataset.edgeFooter = String(layout.edgeFooter);
       this._view.style.setProperty("--homecall-padding", layout.padding + "px");
+      this._view.style.setProperty(
+        "--homecall-footer-bottom",
+        layout.footerBottom + "px"
+      );
       this._view.style.setProperty(
         "--homecall-selector-top",
         layout.selectorTop + "px"
@@ -934,7 +949,7 @@ ha-card[data-short="true"]:has(.header[hidden]) .time{top:calc(50% - 7px)}
       this._recordingTargets = [...this._selection];
       this._recordingSkippedTargets = [...this._skippedTargets || []];
       this._diagnostics = {
-        card_version: false ? "development" : "1.3.0",
+        card_version: false ? "development" : "1.3.1",
         browser_timings_ms: {}
       };
       const tapped = performance.now();

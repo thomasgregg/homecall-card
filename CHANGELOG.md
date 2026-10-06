@@ -1,5 +1,11 @@
 # Changelog
 
+## 1.3.1
+
+- Reduce the text speaker selector to 32px high and use that footprint in the circle's corner clearance calculation, while keeping its font, horizontal padding and the compact icon controls.
+- Balance the bottom whitespace on full-size caption cards while preserving the top and side insets and native footer touch areas. Give captions more clearance below the circle and reclaim the remaining height for a slightly larger action.
+- Balance the visible speaker icon and countdown together on one-row cards while the timer is visible, accounting for the speaker's invisible touch padding. Keep a clear gap below the icon and center the speaker on its own in other states.
+
 ## 1.3.0
 
 - Show immediate microphone preparation feedback and begin recording cues only when actual input samples arrive. Prepare recorder code and a suspended audio context ahead of the tap without opening the microphone or adding fixed waits.
