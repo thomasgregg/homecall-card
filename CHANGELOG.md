@@ -1,5 +1,10 @@
 # Changelog
 
+## 1.2.2
+
+- Hide the extra status clock while flushing a recording and uploading it. The main action already shows progress during both stages.
+- Extend the browser regression check to hold both flush and upload open, verifying that the normal flow stays free of the extra icon through success and return to ready. Error details, optional recording review and opt-in diagnostics remain available.
+
 ## 1.2.1
 
 - Hide raw timing diagnostics and the extra status icon after sending or returning to ready by default.

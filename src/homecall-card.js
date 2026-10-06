@@ -446,7 +446,7 @@ ha-card[data-short="true"]:has(.header[hidden]) .time{top:calc(50% - 7px)}
       (this._phase === "sent" && !showDiagnostics) ||
       (this._phase === "recorded" && !this.config?.preview_before_send) ||
       (this._phase === "loading" && !this._loadingIndicator) ||
-      this._phase === "recording" ||
+      ["recording", "stopping", "sending"].includes(this._phase) ||
       starting ||
       (this._phase === "ready" && !noSelection && !showDiagnostics);
     icon.innerHTML = `<ha-icon icon="mdi:${this._phase === "sent" ? "check-circle-outline" : this._phase === "error" || noSelection ? "alert-circle-outline" : "clock-outline"}"></ha-icon>`;

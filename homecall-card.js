@@ -1,4 +1,4 @@
-/*! HomeCall Card v1.2.1 | MIT License | github.com/thomasgregg/homecall-card */
+/*! HomeCall Card v1.2.2 | MIT License | github.com/thomasgregg/homecall-card */
 (() => {
   // src/layout.js
   function homeCallLayout(width, height, hasSelector = true, selectorWidth = 100, footerWidths = null) {
@@ -530,7 +530,7 @@ ha-card[data-short="true"]:has(.header[hidden]) .time{top:calc(50% - 7px)}
       info.classList.toggle("sr-only", this._phase === "recording" || starting);
       status.classList.toggle("sr-only", true);
       const noSelection = this._phase === "ready" && this._selection?.length === 0, showDiagnostics = this.config?.show_diagnostics === true && !!this._diagnostics;
-      icon.hidden = this._phase === "sent" && !showDiagnostics || this._phase === "recorded" && !this.config?.preview_before_send || this._phase === "loading" && !this._loadingIndicator || this._phase === "recording" || starting || this._phase === "ready" && !noSelection && !showDiagnostics;
+      icon.hidden = this._phase === "sent" && !showDiagnostics || this._phase === "recorded" && !this.config?.preview_before_send || this._phase === "loading" && !this._loadingIndicator || ["recording", "stopping", "sending"].includes(this._phase) || starting || this._phase === "ready" && !noSelection && !showDiagnostics;
       icon.innerHTML = `<ha-icon icon="mdi:${this._phase === "sent" ? "check-circle-outline" : this._phase === "error" || noSelection ? "alert-circle-outline" : "clock-outline"}"></ha-icon>`;
     }
     _showStatus() {
@@ -735,7 +735,7 @@ ha-card[data-short="true"]:has(.header[hidden]) .time{top:calc(50% - 7px)}
       this._recordingTargets = [...this._selection];
       this._clearPreview();
       this._diagnostics = {
-        card_version: false ? "development" : "1.2.1",
+        card_version: false ? "development" : "1.2.2",
         browser_timings_ms: {}
       };
       const tapped = performance.now();

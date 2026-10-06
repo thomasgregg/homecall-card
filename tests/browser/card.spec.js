@@ -1001,17 +1001,38 @@ for (const language of ["en", "de"]) {
   });
 }
 
-test("diagnostics stay hidden by default after sending, reset and recording errors", async ({
+test("normal recording keeps the status icon hidden through flush, upload, success and reset", async ({
   page,
 }) => {
   await page.clock.install();
   await controlledRecorder(page);
+  await page.locator("homecall-card").evaluate((c) => {
+    const fetch = c._hass.fetchWithAuth;
+    c._hass.fetchWithAuth = async (url, options) => {
+      if (options?.method === "POST")
+        await new Promise((resolve) => {
+          window.finishUpload = resolve;
+        });
+      return fetch(url, options);
+    };
+  });
   await page.locator("homecall-card .main").click();
+  await expect(page.locator("homecall-card ha-card")).toHaveAttribute(
+    "data-phase",
+    "stopping",
+  );
+  await expect(page.locator("homecall-card .status-more")).toBeHidden();
   await page.evaluate(() =>
     window.recorderPort.onmessage({
       data: { type: "stopped", total: 12000, reason: "requested" },
     }),
   );
+  await expect(page.locator("homecall-card ha-card")).toHaveAttribute(
+    "data-phase",
+    "sending",
+  );
+  await expect(page.locator("homecall-card .status-more")).toBeHidden();
+  await page.evaluate(() => window.finishUpload());
   await expect(page.locator("homecall-card ha-card")).toHaveAttribute(
     "data-phase",
     "sent",

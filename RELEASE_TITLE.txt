@@ -1,1 +1,1 @@
-Optional diagnostics and a clean default card
+Hide the transient recording status clock
