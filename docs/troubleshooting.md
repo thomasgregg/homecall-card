@@ -18,7 +18,7 @@ The AudioWorklet module is supplied by the integration. If the card cannot load 
 
 ## Delayed playback or missing opening words
 
-Enable **Review recording before sending** to listen to the captured WAV locally. If words are already missing there, investigate microphone startup or capture. If the preview is complete, investigate conversion or the playback route.
+The button shows preparation progress immediately after a tap; speak when it turns red and the waveform starts. The card prepares its recorder code and a suspended audio context ahead of time, but microphone access starts only on tap. Browser or OS microphone startup can still take time. Diagnostics include `recorder_prepared_before_tap` to distinguish prepared starts from starts that still need to load the recorder.
 
 Enable **Show diagnostics** under **Troubleshooting** in the card editor (`show_diagnostics: true` in YAML). It defaults to off. After sending, open the status icon, expand **Diagnostics**, and use **Copy diagnostics**. Copy refreshes first-fetch timings when the trace is still available. Browser upload-request time includes network transfer, server processing and response; it is not pure upload time. HA timings identify body read, validation, conversion, per-target service calls, and time from clip creation to first audio GET. Acceptance and retrieval do not prove audible playback. Traces expire after three minutes and contain no recorded audio or bearer links.
 

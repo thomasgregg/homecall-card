@@ -220,3 +220,30 @@ assert.equal(
   8,
   "Compact footer must stay inset from the card edge",
 );
+
+// Two-row cards must not shrink as they cross the narrow-control breakpoint.
+for (const selector of [false, true]) {
+  let previous = 0;
+  for (let width = 150; width <= 210; width += 0.5) {
+    const x = context.homeCallLayout(width, 120, selector, 32, {
+      discard: 46,
+      time: width < 200 ? 51 : 64,
+      regularTime: 64,
+      borderX: 1,
+      borderY: 1,
+    });
+    assert.ok(
+      x.button >= previous,
+      `${width}x120: widening must not shrink the circle`,
+    );
+    assert.ok(
+      x.button - previous <= 1 || previous === 0,
+      `${width}x120: no sizing jump`,
+    );
+    assert.equal(x.padding, 8);
+    assert.equal(x.centerY, 60);
+    if (!selector && width >= 172)
+      assert.ok(x.button >= 60, `${width}x120: usable action`);
+    previous = x.button;
+  }
+}

@@ -30,6 +30,7 @@ export function homeCallLayout(
       icon: Math.round(button * 0.56),
     };
   }
+  const minimumButton = height <= 120 ? 24 : 52;
   const compact = width < 280 || height < 240,
     tiny = width < 200 || height < 200;
   const padding = tiny ? 8 : compact ? 12 : 20,
@@ -49,8 +50,9 @@ export function homeCallLayout(
     borderY: 1,
   };
   const narrow = width < 200;
-  const discardHeight = narrow ? 32 : 44;
-  const timerHeight = narrow ? 24 : 32;
+  const narrowClearance = narrow;
+  const discardHeight = narrowClearance ? 32 : 44;
+  const timerHeight = narrowClearance ? 24 : 32;
   const footerDistance = Math.min(
     ...[
       [footer.discard, discardHeight],
@@ -62,7 +64,10 @@ export function homeCallLayout(
       ),
     ),
   );
-  const footerLimit = (2 * Math.max(26, footerDistance - 8)) / 1.18;
+  const footerLimit = Math.max(
+    minimumButton,
+    (2 * (footerDistance - 8)) / 1.18,
+  );
   const labelSpace =
     2 *
     Math.max(
@@ -77,7 +82,7 @@ export function homeCallLayout(
   const edgeFooter = !hasSelector && !showLabel && compact;
   const footerPadding = edgeFooter ? 8 : padding;
   const controlWidths = {
-    discard: narrow ? 32 : footer.discard,
+    discard: narrowClearance ? 32 : footer.discard,
     time: footer.time - (edgeFooter ? 13 : 0),
   };
   const labelLimit = showLabel
@@ -85,7 +90,7 @@ export function homeCallLayout(
     : Infinity;
   let button = Math.floor(
     Math.max(
-      52,
+      minimumButton,
       Math.min(
         240,
         width * 0.56,
@@ -111,7 +116,7 @@ export function homeCallLayout(
         (height - 2 * padding - 2 * borderY) / 1.18,
       ),
     );
-    for (let candidate = maximum; candidate >= 52; candidate--) {
+    for (let candidate = maximum; candidate >= minimumButton; candidate--) {
       const radius = candidate * 0.59,
         minimumY = padding + borderY + radius;
       let maximumY = height - padding - borderY - radius;
@@ -150,6 +155,18 @@ export function homeCallLayout(
       }
     }
   }
+  if (narrow && height === 120) {
+    // Use the compact controls' real footprint at narrow widths, but stop
+    // growing at the diameter supported by the regular controls at 200px.
+    // This avoids both a tiny action and a shrink when the controls expand.
+    button = Math.min(
+      button,
+      homeCallLayout(200, height, hasSelector, selectorWidth, {
+        ...footer,
+        time: footer.regularTime ?? footer.time,
+      }).button,
+    );
+  }
   const visualHeight = Math.min(
     button * 1.44,
     height - 2 * padding,
@@ -186,7 +203,7 @@ export function homeCallRecipientBounds(
   outside = false,
 ) {
   if (outside) {
-    const width = Math.min(280, Math.max(240, card.width), viewport.width - 16);
+    const width = Math.min(360, Math.max(320, card.width), viewport.width - 16);
     const below = viewport.height - anchor.bottom - 12;
     const above = anchor.top - 12;
     const maxHeight = Math.min(240, Math.max(below, above));

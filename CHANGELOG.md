@@ -1,5 +1,16 @@
 # Changelog
 
+## 1.3.0
+
+- Show immediate microphone preparation feedback and begin recording cues only when actual input samples arrive. Prepare recorder code and a suspended audio context ahead of the tap without opening the microphone or adding fixed waits.
+- Keep action size stable across recording phases, fix window-resize geometry around the 200px boundary, and preserve footer clearance, timer and discard alignment. Use consistent captions without empty detail lines or unnecessary truncation.
+- Use Home Assistant's native speaker lists in the picker and editor, with a separate integration/availability line, mobile layouts and keyboard support. Distinguish multiple routes for the same physical speaker.
+- Keep skipped-recipient messages concise. Use the microphone to start a new recording after partial delivery; reserve Retry for failed sends.
+- Report selected recipients skipped before sending, including unavailable saved defaults and routes lost while the card is ready. Keep the warning after successful audio retrieval, independently of diagnostics.
+- Remove the optional recording review feature and its local audio player. Tapping Send finishes capture and sends the recording directly. The 60-second limit still waits for explicit Send or Discard.
+- Remove the redundant default-recipient helper text from the native editor.
+- Retain the HomeCall integration 1.7.0 minimum; this release changes only the card. Expand Chromium/WebKit coverage for readiness, resizing, recipient availability and delivery states.
+
 ## 1.2.2
 
 - Hide the extra status clock while flushing a recording and uploading it. The main action already shows progress during both stages.

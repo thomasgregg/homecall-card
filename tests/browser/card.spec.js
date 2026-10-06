@@ -1,5 +1,6 @@
 import { test, expect } from "@playwright/test";
 import { readFile } from "node:fs/promises";
+import { registerHomeAssistantFixtures } from "./ha-fixture.js";
 const script = await readFile(
   new URL("../../homecall-card.js", import.meta.url),
   "utf8",
@@ -12,40 +13,9 @@ async function fixture(
   recipient = "notify.kitchen_speak",
 ) {
   await page.setContent(
-    `<style>body{--primary-color:#009ac0;--primary-text-color:#222;--secondary-text-color:#666;--ha-font-size-m:14px;--ha-border-radius-md:8px;--ha-border-radius-lg:12px;font-family:Arial}homecall-card{display:block;width:${width}px;height:${height}px}</style><button id="toggle">Toggle picker and save</button><main></main>`,
+    `<style>body{--primary-color:#009ac0;--error-color:#db4437;--warning-color:#ffa600;--primary-text-color:#222;--secondary-text-color:#666;--ha-font-size-m:14px;--ha-border-radius-md:8px;--ha-border-radius-lg:12px;font-family:Arial}homecall-card{display:block;width:${width}px;height:${height}px}</style><button id="toggle">Toggle picker and save</button><main></main>`,
   );
-  await page.evaluate(() => {
-    customElements.define(
-      "ha-card",
-      class extends HTMLElement {
-        constructor() {
-          super();
-          this.attachShadow({ mode: "open" }).innerHTML =
-            "<style>:host{border:1px solid #ddd;border-radius:12px;background:white}</style><slot></slot>";
-        }
-      },
-    );
-    customElements.define(
-      "ha-button",
-      class extends HTMLElement {
-        constructor() {
-          super();
-          this.attachShadow({ mode: "open" }).innerHTML =
-            '<style>:host{display:inline-flex}button{box-sizing:border-box;height:var(--ha-button-height,44px);border:1px solid transparent;border-radius:var(--ha-button-border-radius,8px);background:transparent;color:#666;font:14px Arial}:host(.main) button{background:var(--homecall-tone);color:white}</style><button part="base"><span part="label"><slot></slot></span></button>';
-        }
-      },
-    );
-    customElements.define(
-      "ha-icon",
-      class extends HTMLElement {
-        connectedCallback() {
-          this.style.cssText =
-            "display:inline-block;width:var(--mdc-icon-size,20px);height:var(--mdc-icon-size,20px)";
-        }
-      },
-    );
-    customElements.define("ha-form", class extends HTMLElement {});
-  });
+  await page.evaluate(registerHomeAssistantFixtures);
   await page.addScriptTag({ content: script });
   await page.evaluate(
     ({ liveStatus, recipient }) => {
@@ -54,7 +24,9 @@ async function fixture(
         c._load = function () {
           this._phase = "ready";
           this._selection = [recipient];
-          this._button("Aufnehmen");
+          this._view.querySelector("summary span").textContent =
+            this._t("1 Lautsprecher");
+          this._button("Mikrofon starten");
         };
       c._hass = { locale: { language: "en" } };
       if (liveStatus) {
@@ -118,7 +90,7 @@ test("an offline Echo recovers from HA updates without a dashboard reload", asyn
   });
   await expect(page.locator("homecall-card .main")).toHaveAttribute(
     "aria-label",
-    "Record",
+    "Start microphone",
   );
   expect(await page.evaluate(() => window.statusRequests)).toBe(2);
   expect((await geometry(page)).size).toBe(original.size);
@@ -137,7 +109,7 @@ test("Retry fetches current availability and keeps recovered recipients selected
   await page.locator("homecall-card .main").click();
   await expect(page.locator("homecall-card .main")).toHaveAttribute(
     "aria-label",
-    "Record",
+    "Start microphone",
   );
   expect(await page.evaluate(() => window.statusRequests)).toBe(2);
   expect(
@@ -175,6 +147,8 @@ async function geometry(page) {
     };
     const footer = q(".info");
     return {
+      cardWidth: c.width,
+      cardHeight: c.height,
       size: b.width,
       top: b.top - c.top,
       bottom: c.bottom - b.bottom,
@@ -187,6 +161,86 @@ async function geometry(page) {
       selectorHidden: e.shadowRoot.querySelector(".targets").hidden,
     };
   });
+}
+
+for (const language of ["en", "de"]) {
+  for (const picker of [false, true]) {
+    test(`window resizing updates the mounted two-row card in ${language}, picker ${picker}`, async ({
+      page,
+    }) => {
+      await fixture(page, 172, 120);
+      if (picker) await page.locator("#toggle").click();
+      await page.locator("homecall-card").evaluate((c, language) => {
+        c._lang = language;
+        c.style.width = "calc(50vw - 64px)";
+      }, language);
+      // Wait for browser rendering and the observer's scheduled frame, without
+      // calling the card's layout method or using an arbitrary sleep.
+      const render = () =>
+        page.evaluate(
+          () =>
+            new Promise((resolve) => {
+              requestAnimationFrame(() => requestAnimationFrame(resolve));
+            }),
+        );
+      const resize = async (width) => {
+        await page.setViewportSize({ width, height: 600 });
+        await render();
+        const current = await geometry(page);
+        expect(current.cardWidth).toBeCloseTo(width / 2 - 64, 2);
+        expect(current.cardHeight).toBe(120);
+        expect(current.top).toBeCloseTo(current.bottom, 1);
+        expect(current.leftInset).toBe(9);
+        expect(current.rightInset).toBe(9);
+        expect(current.bottomInset).toBe(9);
+        return current;
+      };
+      const widths = [428, 448, 472, 483, 515, 526, 527, 528, 529, 535, 548];
+      const reference = new Map();
+      for (const phase of ["ready", "starting", "recording"]) {
+        await page.locator("homecall-card").evaluate((c, phase) => {
+          c._phase = phase;
+          c._sampleRate = 48000;
+          c._samples = 55 * c._sampleRate;
+          c._button("Mikrofon starten");
+          c._draw();
+        }, phase);
+        let previous = 0;
+        for (const width of widths) {
+          const current = await resize(width);
+          expect(current.size).toBeGreaterThanOrEqual(previous);
+          if (width >= 527 && width <= 529)
+            expect(current.size - previous).toBeLessThanOrEqual(1);
+          if (!picker && current.cardWidth >= 172)
+            expect(current.size).toBeGreaterThanOrEqual(56);
+          if (reference.has(width))
+            expect(current.size).toBe(reference.get(width));
+          else reference.set(width, current.size);
+          if (phase === "recording") {
+            expect(
+              current.discardGap,
+              `${width}: discard clearance`,
+            ).toBeGreaterThanOrEqual(7.9);
+            expect(
+              current.timerGap,
+              `${width}: timer clearance`,
+            ).toBeGreaterThanOrEqual(7.9);
+          }
+          previous = current.size;
+        }
+        for (const width of [...widths].reverse()) {
+          const current = await resize(width);
+          expect(current.size).toBe(reference.get(width));
+        }
+        // Several changes before observing the result must settle at the final
+        // window size, rather than leaving a stale diameter from an earlier one.
+        for (const width of [535, 428, 548, 527, 472])
+          await page.setViewportSize({ width, height: 600 });
+        await render();
+        expect((await geometry(page)).size).toBe(reference.get(472));
+      }
+    });
+  }
 }
 for (const width of [174, 177.5, 215, 231]) {
   test(`saved selector cycles restore mounted size at ${width}×184`, async ({
@@ -238,7 +292,6 @@ for (const [width, height] of [
     ]) {
       await page.locator("homecall-card").evaluate((c, p) => {
         c._phase = p;
-        c._view.classList.toggle("recording", p === "recording");
         c._view.querySelector(".time").textContent = "00:05";
         c._syncPhase();
         c._applyLayout();
@@ -271,7 +324,7 @@ test("an offline DLNA speaker recovers when HA reports idle", async ({
   });
   await expect(page.locator("homecall-card .main")).toHaveAttribute(
     "aria-label",
-    "Record",
+    "Start microphone",
   );
   expect(
     await page.locator("homecall-card").evaluate((c) => c._selection),
@@ -343,7 +396,7 @@ test("actual removal releases resources and unchanged action keeps its icon", as
     await page.locator("homecall-card").evaluate((c) => {
       const icon = c.shadowRoot.querySelector(".main ha-icon");
       c._button("Geräte werden geladen …");
-      c._button("Aufnehmen");
+      c._button("Mikrofon starten");
       return icon === c.shadowRoot.querySelector(".main ha-icon");
     }),
   ).toBe(true);
@@ -414,7 +467,6 @@ test("countdown and ring reach the limit without sending, and expose Send on a t
     c._phase = "recording";
     c._sampleRate = 48000;
     c._samples = 48000 * 30;
-    c._view.classList.add("recording");
     c._button("Senden", "microphone");
     c._draw();
     cancelAnimationFrame(c._raf);
@@ -448,7 +500,7 @@ test("countdown and ring reach the limit without sending, and expose Send on a t
   expect(await page.evaluate(() => window.sendsAtLimit)).toBe(1);
 });
 
-test("microphone startup keeps its native appearance and ignores repeat clicks", async ({
+test("microphone startup immediately shows preparation and ignores repeat clicks", async ({
   page,
 }) => {
   await fixture(page);
@@ -464,13 +516,20 @@ test("microphone startup keeps its native appearance and ignores repeat clicks",
     window.AudioWorkletNode ||= class {};
     window.isSecureContext ||
       Object.defineProperty(window, "isSecureContext", { value: true });
-    if (!navigator.mediaDevices)
-      Object.defineProperty(navigator, "mediaDevices", {
-        value: { getUserMedia() {} },
-      });
+    Object.defineProperty(navigator, "mediaDevices", {
+      configurable: true,
+      value: { getUserMedia: () => new Promise(() => {}) },
+    });
     window.startIcon = c.shadowRoot.querySelector(".main ha-icon");
   });
   await page.locator("homecall-card .main").click({ force: true });
+  await expect(page.locator("homecall-card .main")).toHaveAttribute(
+    "aria-label",
+    "Preparing …",
+  );
+  expect(
+    await page.locator("homecall-card .main").evaluate((b) => b.loading),
+  ).toBe(true);
   await expect(page.locator("homecall-card .main")).toHaveAttribute(
     "aria-disabled",
     "true",
@@ -491,25 +550,52 @@ test("microphone startup keeps its native appearance and ignores repeat clicks",
 
 async function controlledRecorder(
   page,
-  preview = false,
   constructionFails = false,
+  prepared = false,
+  {
+    width = 376,
+    height = 350,
+    deferReadiness = false,
+    targets,
+    defaults,
+    language = "en",
+  } = {},
 ) {
-  await fixture(page, 376, 350);
+  await fixture(page, width, height);
   await page.locator("homecall-card").evaluate(
-    (c, { preview, constructionFails }) => {
-      c.config.preview_before_send = preview;
+    async (c, { constructionFails, prepared, targets, defaults, language }) => {
+      c._lang = language;
+      if (targets) {
+        c._defaultsAll = defaults === undefined;
+        c._defaults = defaults || [];
+        c._fillTargets(targets);
+      }
+      window.audioContexts = 0;
+      window.recorderModules = 0;
+      window.microphoneRequests = 0;
       window.isSecureContext ||
         Object.defineProperty(window, "isSecureContext", { value: true });
       window.AudioContext = class {
         constructor(options) {
+          window.audioContexts++;
           this.sampleRate = options?.sampleRate || 96000;
           this.state = "running";
-          this.audioWorklet = { addModule: async () => {} };
+          this.audioWorklet = {
+            addModule: async () => {
+              window.recorderModules++;
+            },
+          };
         }
         resume() {
+          this.state = "running";
+          return Promise.resolve();
+        }
+        suspend() {
+          this.state = "suspended";
           return Promise.resolve();
         }
         close() {
+          this.state = "closed";
           return Promise.resolve();
         }
         createMediaStreamSource() {
@@ -538,9 +624,10 @@ async function controlledRecorder(
       Object.defineProperty(navigator, "mediaDevices", {
         configurable: true,
         value: {
-          getUserMedia: async () => ({
-            getTracks: () => [window.microphoneTrack],
-          }),
+          getUserMedia: async () => {
+            window.microphoneRequests++;
+            return { getTracks: () => [window.microphoneTrack] };
+          },
         },
       });
       window.uploads = [];
@@ -588,8 +675,14 @@ async function controlledRecorder(
           },
         },
       });
+      if (prepared) {
+        c._warmRecorder();
+        await c._recorderPreparation.loaded;
+        window.idleMicrophoneRequests = window.microphoneRequests;
+        window.preparedContextState = c._recorderPreparation.context.state;
+      }
     },
-    { preview, constructionFails },
+    { constructionFails, prepared, targets, defaults, language },
   );
   await page.locator("homecall-card .main").click();
   if (constructionFails) {
@@ -606,6 +699,7 @@ async function controlledRecorder(
     "data-phase",
     "starting",
   );
+  if (deferReadiness) return;
   await page.evaluate(() => {
     window.recorderPort.onmessage({ data: { type: "ready" } });
     window.recorderPort.onmessage({
@@ -622,12 +716,504 @@ async function controlledRecorder(
   );
 }
 
+const skippedSpeakers = [
+  {
+    entity_id: "media_player.offline",
+    name: "Living room speaker",
+    transport: "sonos",
+    available: false,
+  },
+  { entity_id: "notify.kitchen_speak", name: "Kitchen", available: true },
+];
+for (const explicit of [false, true]) {
+  test(`skipped ${explicit ? "custom defaults" : "all-speaker defaults"} stay visible after a successful fetch with diagnostics off`, async ({
+    page,
+  }) => {
+    await controlledRecorder(page, false, false, {
+      targets: skippedSpeakers,
+      defaults: explicit
+        ? skippedSpeakers.map((target) => target.entity_id)
+        : undefined,
+    });
+    await page.clock.install();
+    await page.locator("homecall-card .main").click();
+    await page.evaluate(() =>
+      window.recorderPort.onmessage({
+        data: { type: "stopped", total: 12000, reason: "requested" },
+      }),
+    );
+    await expect(page.locator("homecall-card ha-card")).toHaveAttribute(
+      "data-partial-send",
+      "true",
+    );
+    await expect(page.locator("homecall-card .status-more")).toBeVisible();
+    await expect(page.locator("homecall-card .status")).toContainText(
+      "Skipped: Living room speaker (Sonos).",
+    );
+    await expect(page.locator("homecall-card .status")).toContainText(
+      "Living room speaker (Sonos)",
+    );
+    const result = await page
+      .locator("homecall-card")
+      .evaluate(async (card) => {
+        await card._checkReceipt("unused", 0);
+        return { timer: !!card._readyTimer, upload: window.uploads[0].url };
+      });
+    expect(result.timer).toBe(false);
+    expect(result.upload).toContain("target=notify.kitchen_speak");
+    expect(result.upload).not.toContain("media_player.offline");
+    await page.clock.fastForward(6000);
+    await expect(page.locator("homecall-card ha-card")).toHaveAttribute(
+      "data-phase",
+      "sent",
+    );
+    await expect(page.locator("homecall-card .main ha-icon")).toHaveAttribute(
+      "icon",
+      "mdi:microphone",
+    );
+    await page.locator("homecall-card .status-more").click();
+    await expect(page.locator("homecall-card .status-popover")).toContainText(
+      "Skipped: Living room speaker (Sonos).",
+    );
+    await expect(
+      page.locator("homecall-card .status-popover details"),
+    ).toHaveCount(0);
+    await page.keyboard.press("Escape");
+    await page.locator("homecall-card .main").click();
+    await expect(page.locator("homecall-card ha-card")).toHaveAttribute(
+      "data-phase",
+      "starting",
+    );
+    await expect(page.locator("homecall-card .main")).toHaveAttribute(
+      "aria-label",
+      "Preparing …",
+    );
+    expect(await page.evaluate(() => window.uploads.length)).toBe(1);
+    await expect(page.locator("homecall-card .status-more")).toBeHidden();
+    await expect(page.locator("homecall-card .status-popover")).toBeHidden();
+  });
+}
+test("unselected offline speakers cannot turn a complete send into a warning", async ({
+  page,
+}) => {
+  await controlledRecorder(page, false, false, {
+    targets: skippedSpeakers,
+    defaults: ["notify.kitchen_speak"],
+  });
+  await page.clock.install({ time: new Date("2026-10-06T12:00:00Z") });
+  await page.clock.pauseAt(new Date("2026-10-06T12:00:01Z"));
+  await page.locator("homecall-card .main").click();
+  await page.evaluate(() =>
+    window.recorderPort.onmessage({
+      data: { type: "stopped", total: 12000, reason: "requested" },
+    }),
+  );
+  await expect(page.locator("homecall-card ha-card")).toHaveAttribute(
+    "data-phase",
+    "sent",
+  );
+  await expect(page.locator("homecall-card ha-card")).toHaveAttribute(
+    "data-partial-send",
+    "false",
+  );
+  await expect(page.locator("homecall-card .status-more")).toBeHidden();
+  expect(
+    await page.locator("homecall-card").evaluate((card) => !!card._readyTimer),
+  ).toBe(true);
+  await page.clock.fastForward(4999);
+  await expect(page.locator("homecall-card ha-card")).toHaveAttribute(
+    "data-phase",
+    "sent",
+  );
+  await page.clock.fastForward(1);
+  await expect(page.locator("homecall-card ha-card")).toHaveAttribute(
+    "data-phase",
+    "ready",
+  );
+  await expect(page.locator("homecall-card .status-more")).toBeHidden();
+});
+
+test("a rejected send retains Retry instead of the new-recording action", async ({
+  page,
+}) => {
+  await controlledRecorder(page);
+  await page.locator("homecall-card").evaluate((card) => {
+    card._hass.fetchWithAuth = async () => ({
+      ok: true,
+      json: async () => ({ results: [{ accepted: false }] }),
+    });
+  });
+  await page.locator("homecall-card .main").click();
+  await page.evaluate(() =>
+    window.recorderPort.onmessage({
+      data: { type: "stopped", total: 12000, reason: "requested" },
+    }),
+  );
+  await expect(page.locator("homecall-card ha-card")).toHaveAttribute(
+    "data-phase",
+    "error",
+  );
+  await expect(page.locator("homecall-card .main")).toHaveAttribute(
+    "aria-label",
+    "Retry",
+  );
+  await expect(page.locator("homecall-card .main ha-icon")).toHaveAttribute(
+    "icon",
+    "mdi:refresh",
+  );
+  await page.clock.install();
+  await page.clock.fastForward(6000);
+  await expect(page.locator("homecall-card ha-card")).toHaveAttribute(
+    "data-phase",
+    "error",
+  );
+  await page.locator("homecall-card .main").click();
+  await expect(page.locator("homecall-card ha-card")).toHaveAttribute(
+    "data-phase",
+    "ready",
+  );
+  await expect(page.locator("homecall-card .status-more")).toBeHidden();
+});
+
+for (const [width, height] of [
+  [160, 56],
+  [177.5, 184],
+  [376, 312],
+]) {
+  test(`capture cues wait for actual input at ${width}×${height}`, async ({
+    page,
+  }) => {
+    await controlledRecorder(page, false, true, {
+      width,
+      height,
+      deferReadiness: true,
+    });
+    const card = page.locator("homecall-card ha-card");
+    const button = page.locator("homecall-card .main");
+    const before = await button.boundingBox();
+    await expect(button).toHaveAttribute("aria-label", "Preparing …");
+    await expect(card).toHaveAttribute("data-tone", "blue");
+    await expect(page.locator("homecall-card .time")).toBeHidden();
+    await expect(page.locator("homecall-card .wave")).toHaveCSS("opacity", "0");
+    await expect(page.locator("homecall-card .status-more")).toBeHidden();
+    expect(await button.evaluate((b) => b.loading)).toBe(true);
+    await page.evaluate(() => {
+      window.recorderPort.onmessage({ data: { type: "ready" } });
+      window.recorderPort.onmessage({
+        data: { type: "chunk", sequence: 0, samples: new Float32Array(12000) },
+      });
+    });
+    await expect(card).toHaveAttribute("data-phase", "recording");
+    await expect(card).toHaveAttribute("data-tone", "red");
+    await expect(page.locator("homecall-card .time")).toBeVisible();
+    await expect(page.locator("homecall-card .status")).toHaveText("Speak now");
+    expect(await button.evaluate((b) => b.loading)).toBe(false);
+    expect(await button.boundingBox()).toEqual(before);
+    // A complete track is visible even at the first, silent input quantum.
+    expect(
+      await page
+        .locator("homecall-card .halo")
+        .evaluate((h) => getComputedStyle(h, "::before").content),
+    ).toBe('""');
+    await button.click();
+    await expect(card).toHaveAttribute("data-phase", "stopping");
+    await expect(page.locator("homecall-card .time")).toBeHidden();
+    await expect(page.locator("homecall-card .wave")).toHaveCSS("opacity", "0");
+    expect(await page.evaluate(() => window.uploads.length)).toBe(0);
+  });
+}
+
+for (const [width, height] of [
+  [160, 56],
+  [177.5, 184],
+  [246, 184],
+  [376, 312],
+]) {
+  for (const selector of [false, true]) {
+    test(`all state controls fit ${width}×${height} with picker ${selector}`, async ({
+      page,
+    }) => {
+      await fixture(page, width, height);
+      if (selector) await page.locator("#toggle").click();
+      for (const lang of ["en", "de"]) {
+        for (const phase of [
+          "loading",
+          "ready",
+          "starting",
+          "recording",
+          "stopping",
+          "recorded",
+          "sending",
+          "sent",
+          "error",
+        ]) {
+          const controls = await page.locator("homecall-card").evaluate(
+            (c, { phase, lang }) => {
+              c._lang = lang;
+              c._view.querySelector(".discard-label").textContent =
+                c._t("Verwerfen");
+              c._view.querySelector("summary span").textContent =
+                c._t("1 Lautsprecher");
+              c._phase = phase;
+              c._loadingIndicator = phase === "loading";
+              c._button(
+                {
+                  loading: "Geräte werden geladen …",
+                  ready: "Mikrofon starten",
+                  starting: "Vorbereitung …",
+                  recording: "Sprich jetzt",
+                  stopping: "Aufnahme wird abgeschlossen …",
+                  recorded: "Senden",
+                  sending: "Wird gesendet",
+                  sent: "Neue Durchsage",
+                  error: "Erneut versuchen",
+                }[phase],
+              );
+              c._applyLayout();
+              const root = c.shadowRoot;
+              const card = root
+                .querySelector("ha-card")
+                .getBoundingClientRect();
+              const visible = [
+                ".main",
+                ".discard",
+                ".time",
+                "summary",
+                ".action-label",
+                ".status-more",
+              ]
+                .map((selector) => ({
+                  selector,
+                  box: root.querySelector(selector).getBoundingClientRect(),
+                }))
+                .filter(({ box }) => box.width && box.height);
+              // The short picker keeps a 32px touch target. Its painted 22px
+              // speaker icon sits above the non-interactive countdown.
+              const painted = visible.map((control) => {
+                if (control.selector !== "summary" || !c._layout.short)
+                  return control;
+                return {
+                  ...control,
+                  box: root
+                    .querySelector(".speaker-icon")
+                    .getBoundingClientRect(),
+                };
+              });
+              return {
+                fits: visible.every(
+                  ({ box: b }) =>
+                    b.left >= card.left &&
+                    b.right <= card.right &&
+                    b.top >= card.top &&
+                    b.bottom <= card.bottom,
+                ),
+                overlaps: painted.flatMap((a, i) =>
+                  painted
+                    .slice(i + 1)
+                    .filter(
+                      (b) =>
+                        Math.min(a.box.right, b.box.right) -
+                          Math.max(a.box.left, b.box.left) >
+                          0.5 &&
+                        Math.min(a.box.bottom, b.box.bottom) -
+                          Math.max(a.box.top, b.box.top) >
+                          0.5,
+                    )
+                    .map((b) => [a.selector, b.selector]),
+                ),
+                captionClipped:
+                  !root.querySelector(".action-label").hidden &&
+                  root.querySelector(".action-label").scrollWidth >
+                    root.querySelector(".action-label").clientWidth + 1,
+                timerHidden: root.querySelector(".time").hidden,
+                waveformOpacity: getComputedStyle(root.querySelector(".wave"))
+                  .opacity,
+              };
+            },
+            { phase, lang },
+          );
+          expect(controls.fits, `${lang} ${phase}`).toBe(true);
+          expect(controls.overlaps, `${lang} ${phase}`).toEqual([]);
+          expect(controls.captionClipped, `${lang} ${phase}`).toBe(false);
+          expect(controls.timerHidden, phase).toBe(
+            !["recording", "recorded"].includes(phase),
+          );
+          expect(controls.waveformOpacity, phase).toBe(
+            ["recording", "recorded"].includes(phase) ? "0.24" : "0",
+          );
+        }
+      }
+    });
+  }
+}
+
+test("partial delivery keeps its warning after an audio fetch and offers details", async ({
+  page,
+}) => {
+  await controlledRecorder(page);
+  await page.locator("homecall-card").evaluate((c) => {
+    c._recordingTargets = ["media_player.kitchen", "media_player.living_room"];
+  });
+  await page.locator("homecall-card .main").click();
+  await page.evaluate(() =>
+    window.recorderPort.onmessage({
+      data: { type: "stopped", total: 12000, reason: "requested" },
+    }),
+  );
+  await expect(page.locator("homecall-card ha-card")).toHaveAttribute(
+    "data-phase",
+    "sent",
+  );
+  await expect(page.locator("homecall-card .status")).toContainText(
+    "Some devices could not be reached.",
+  );
+  await expect(page.locator("homecall-card .main ha-icon")).toHaveAttribute(
+    "icon",
+    "mdi:microphone",
+  );
+  await expect(page.locator("homecall-card .status-more")).toBeVisible();
+  await expect(
+    page.locator("homecall-card .status-more ha-icon"),
+  ).toHaveAttribute("icon", "mdi:alert-circle-outline");
+  await expect(page.locator("homecall-card .status-more ha-icon")).toHaveCSS(
+    "color",
+    "rgb(255, 166, 0)",
+  );
+  expect(
+    await page.locator("homecall-card").evaluate((c) => c._readyTimer),
+  ).toBeUndefined();
+  await page.locator("homecall-card .status-more").click();
+  await expect(page.locator("homecall-card .status-popover")).toContainText(
+    "Some devices could not be reached.",
+  );
+  await page.keyboard.press("Escape");
+  await page.locator("homecall-card .main").click();
+  await expect(page.locator("homecall-card ha-card")).toHaveAttribute(
+    "data-partial-send",
+    "false",
+  );
+  await expect(page.locator("homecall-card ha-card")).toHaveAttribute(
+    "data-phase",
+    "starting",
+  );
+  expect(await page.evaluate(() => window.uploads.length)).toBe(1);
+});
+
+test("prepared recording reuses code across announcements while releasing the microphone", async ({
+  page,
+}) => {
+  await controlledRecorder(page, false, true);
+  expect(await page.evaluate(() => window.idleMicrophoneRequests)).toBe(0);
+  expect(await page.evaluate(() => window.preparedContextState)).toBe(
+    "suspended",
+  );
+  expect(
+    await page
+      .locator("homecall-card")
+      .evaluate((c) => c._diagnostics.recorder_prepared_before_tap),
+  ).toBe(true);
+  await page.locator("homecall-card .main").click();
+  await page.evaluate(() => {
+    window.recorderPort.onmessage({
+      data: { type: "stopped", total: 12000, reason: "requested" },
+    });
+  });
+  await expect(page.locator("homecall-card ha-card")).toHaveAttribute(
+    "data-phase",
+    "sent",
+  );
+  expect(await page.evaluate(() => window.trackStopped)).toBe(true);
+  expect(
+    await page
+      .locator("homecall-card")
+      .evaluate((c) => c._recorderPreparation.context.state),
+  ).toBe("suspended");
+  await page.locator("homecall-card .main").click();
+  await page.locator("homecall-card").evaluate((c) => {
+    window.previousPort = window.recorderPort;
+    c._start();
+  });
+  await expect
+    .poll(() =>
+      page.evaluate(() => window.recorderPort !== window.previousPort),
+    )
+    .toBe(true);
+  await page.evaluate(() => {
+    window.recorderPort.onmessage({ data: { type: "ready" } });
+    window.recorderPort.onmessage({
+      data: {
+        type: "chunk",
+        sequence: 0,
+        samples: new Float32Array(128).fill(0.5),
+      },
+    });
+  });
+  await expect(page.locator("homecall-card ha-card")).toHaveAttribute(
+    "data-phase",
+    "recording",
+  );
+  expect(
+    await page.evaluate(() => [
+      window.audioContexts,
+      window.recorderModules,
+      window.microphoneRequests,
+    ]),
+  ).toEqual([1, 1, 2]);
+  expect(
+    await page
+      .locator("homecall-card")
+      .evaluate((c) => [c._samples, c._chunks[0][0]]),
+  ).toEqual([128, 0.5]);
+  await page.locator("homecall-card").evaluate((c) => {
+    window.preparedContext = c._recorderPreparation.context;
+    c.remove();
+  });
+  await expect
+    .poll(() => page.evaluate(() => window.preparedContext.state))
+    .toBe("closed");
+});
+
+test("hiding the page during final flush preserves samples and closes the prepared context", async ({
+  page,
+}) => {
+  await controlledRecorder(page, false, true);
+  await page.locator("homecall-card .main").click();
+  await page.evaluate(() => {
+    window.backgroundContext =
+      document.querySelector("homecall-card")._recorderPreparation.context;
+    Object.defineProperty(document, "hidden", {
+      configurable: true,
+      value: true,
+    });
+    document.dispatchEvent(new Event("visibilitychange"));
+  });
+  await expect(page.locator("homecall-card ha-card")).toHaveAttribute(
+    "data-phase",
+    "stopping",
+  );
+  expect(await page.evaluate(() => !!window.trackStopped)).toBe(false);
+  await page.evaluate(() => {
+    window.recorderPort.onmessage({
+      data: { type: "stopped", total: 12000, reason: "requested" },
+    });
+  });
+  await expect(page.locator("homecall-card ha-card")).toHaveAttribute(
+    "data-phase",
+    "sent",
+  );
+  expect(await page.evaluate(() => window.trackStopped)).toBe(true);
+  expect(await page.evaluate(() => window.backgroundContext.state)).toBe(
+    "closed",
+  );
+  expect(await page.evaluate(() => window.uploads[0].samples)).toBe(12000);
+});
+
 test("recorder construction failure releases the microphone without unhandled rejections", async ({
   page,
 }) => {
   const errors = [];
   page.on("pageerror", (error) => errors.push(error.message));
-  await controlledRecorder(page, false, true);
+  await controlledRecorder(page, true);
   expect(await page.evaluate(() => window.trackStopped)).toBe(true);
   expect(await page.evaluate(() => window.uploads.length)).toBe(0);
   expect(errors).toEqual([]);
@@ -686,10 +1272,13 @@ test("capture readiness, final flush, frozen recipients and private diagnostics"
   expect(copied).not.toContain("http");
 });
 
-test("optional local review flushes capture and waits for a separate Send", async ({
+test("legacy review config cannot interrupt the flushed Send flow", async ({
   page,
 }) => {
-  await controlledRecorder(page, true);
+  await controlledRecorder(page);
+  await page.locator("homecall-card").evaluate((card) => {
+    card.config.preview_before_send = true; // Older saved YAML is harmless.
+  });
   await page.locator("homecall-card .main").click();
   await page.evaluate(() => {
     window.recorderPort.onmessage({
@@ -698,22 +1287,16 @@ test("optional local review flushes capture and waits for a separate Send", asyn
   });
   await expect(page.locator("homecall-card ha-card")).toHaveAttribute(
     "data-phase",
-    "recorded",
+    "sent",
   );
-  await expect(
-    page.locator("homecall-card .status-popover audio"),
-  ).toBeVisible();
-  expect(await page.evaluate(() => window.uploads.length)).toBe(0);
+  await expect(page.locator("homecall-card .status-popover audio")).toHaveCount(
+    0,
+  );
+  expect(await page.evaluate(() => window.uploads.length)).toBe(1);
   expect(await page.evaluate(() => window.trackStopped)).toBe(true);
   await expect(
     page.locator("homecall-card .status-popover details"),
   ).toHaveCount(0);
-  await page.locator("homecall-card .preview-send").click();
-  await expect(page.locator("homecall-card ha-card")).toHaveAttribute(
-    "data-phase",
-    "sent",
-  );
-  expect(await page.evaluate(() => window.uploads.length)).toBe(1);
 });
 
 test("diagnostic copy starts the clipboard write before refresh and retains the clicked trace", async ({
@@ -852,7 +1435,6 @@ for (const width of [160, 177.5, 246, 376]) {
     ]) {
       await page.locator("homecall-card").evaluate((c, phase) => {
         c._phase = phase;
-        c._view.classList.toggle("recording", phase === "recording");
         c._syncPhase();
         c._applyLayout();
       }, phase);
@@ -921,12 +1503,16 @@ for (const selector of [true, false]) {
   }) => {
     await fixture(page, 246, 56);
     if (selector) await page.locator("#toggle").click();
-    for (const phase of ["starting", "recording", "recorded"]) {
+    await page.locator("homecall-card").evaluate((c) => {
+      c._phase = "starting";
+      c._syncPhase();
+    });
+    await expect(page.locator("homecall-card .time")).toBeHidden();
+    for (const phase of ["recording", "recorded"]) {
       const geometry = await page
         .locator("homecall-card")
         .evaluate((c, phase) => {
           c._phase = phase;
-          c._view.classList.toggle("recording", phase === "recording");
           c._view.querySelector(".time").textContent = "0:43";
           c._syncPhase();
           const time = c._view.querySelector(".time");
@@ -1073,12 +1659,12 @@ test("the native editor enables diagnostics explicitly and removes the option wh
     const editor = document.createElement("homecall-card-editor");
     editor.setConfig({
       type: "custom:homecall-card",
-      preview_before_send: true,
+      show_speaker_selection: false,
     });
     document.querySelector("main").append(editor);
-    const form = editor.shadowRoot.querySelector("ha-form");
+    const form = editor.shadowRoot.querySelector(".troubleshooting ha-form");
     const initial = form.data.show_diagnostics;
-    const fields = form.schema.find((s) => s.name === "troubleshooting").schema;
+    const fields = form.schema;
     const emitted = [];
     editor.addEventListener("config-changed", (event) =>
       emitted.push(event.detail.config),
@@ -1094,7 +1680,9 @@ test("the native editor enables diagnostics explicitly and removes the option wh
     savedEditor.addEventListener("config-changed", (event) =>
       emitted.push(event.detail.config),
     );
-    const savedForm = savedEditor.shadowRoot.querySelector("ha-form");
+    const savedForm = savedEditor.shadowRoot.querySelector(
+      ".troubleshooting ha-form",
+    );
     const enabled = savedForm.data.show_diagnostics;
     savedForm.dispatchEvent(
       new CustomEvent("value-changed", {
@@ -1110,8 +1698,178 @@ test("the native editor enables diagnostics explicitly and removes the option wh
   expect(config.enabled).toBe(true);
   expect(config.emitted[0]).toMatchObject({
     show_diagnostics: true,
-    preview_before_send: true,
+    show_speaker_selection: false,
   });
   expect(config.emitted[1]).not.toHaveProperty("show_diagnostics");
-  expect(config.emitted[1].preview_before_send).toBe(true);
+  expect(config.emitted[1].show_speaker_selection).toBe(false);
 });
+
+for (const width of [354, 376, 470]) {
+  test(`large-card captions remain complete and useful at ${width}px`, async ({
+    page,
+  }) => {
+    await fixture(page, width, 312);
+    for (const language of ["en", "de"]) {
+      for (const phase of [
+        "loading",
+        "ready",
+        "starting",
+        "recording",
+        "stopping",
+        "recorded",
+        "sending",
+        "sent",
+        "error",
+      ]) {
+        const result = await page.locator("homecall-card").evaluate(
+          (c, { language, phase }) => {
+            c._lang = language;
+            c._phase = phase;
+            c._button(
+              {
+                loading: "Geräte werden geladen …",
+                ready: "Mikrofon starten",
+                starting: "Vorbereitung …",
+                recording: "Senden",
+                stopping: "Aufnahme wird abgeschlossen …",
+                recorded: "Senden",
+                sending: "Wird gesendet",
+                sent: "Neue Durchsage",
+                error: "Erneut versuchen",
+              }[phase],
+            );
+            c._applyLayout();
+            const label = c.shadowRoot.querySelector(".action-label");
+            return {
+              visible: !label.hidden,
+              text: label.textContent,
+              height: label.getBoundingClientRect().height,
+              fontSize: getComputedStyle(label).fontSize,
+              clipped: label.scrollWidth > label.clientWidth + 1,
+            };
+          },
+          { language, phase },
+        );
+        expect(result.visible, language + " " + phase).toBe(true);
+        expect(result.text).not.toContain("...");
+        expect(result.text).not.toContain("…");
+        if (["loading", "starting", "stopping"].includes(phase))
+          expect(result.height).toBe(16);
+        expect(result.height).toBeLessThanOrEqual(32);
+        expect(result.clipped).toBe(false);
+        expect(result.fontSize).toBe("14px");
+        if (phase === "sent")
+          expect(result.text).toBe(
+            language === "de" ? "Neue Durchsage" : "New announcement",
+          );
+        if (phase === "recording")
+          expect(result.text).toBe(
+            language === "de" ? "Sprich jetzt" : "Speak now",
+          );
+      }
+    }
+  });
+}
+
+test("empty footer space keeps complete English actions visible at 323px", async ({
+  page,
+}) => {
+  await fixture(page, 323, 312);
+  for (const [phase, action, caption] of [
+    ["ready", "Mikrofon starten", "Start microphone"],
+    ["sent", "Neue Durchsage", "New announcement"],
+  ]) {
+    await page.locator("homecall-card").evaluate(
+      (c, { phase, action }) => {
+        c._phase = phase;
+        c._button(action);
+        c._applyLayout();
+      },
+      { phase, action },
+    );
+    const label = page.locator("homecall-card .action-label");
+    await expect(label).toBeVisible();
+    await expect(label).toHaveText(caption);
+    expect(
+      await label.evaluate(
+        (l) => l.scrollWidth <= l.clientWidth + 1 && l.scrollHeight <= 32,
+      ),
+    ).toBe(true);
+  }
+});
+
+for (const picker of [false, true]) {
+  test(`two-row circle grows through 200px and stays stable across phases, picker ${picker}`, async ({
+    page,
+  }) => {
+    await fixture(page, 190, 120);
+    if (picker) await page.locator("#toggle").click();
+    let previousSize = 0;
+    const sizes = new Map();
+    for (const width of [
+      150, 160, 172, 177.5, 190, 193.5, 195, 199, 199.5, 200, 200.5, 203.5, 205,
+      210,
+    ]) {
+      await page.locator("homecall-card").evaluate((c, width) => {
+        c.style.width = width + "px";
+        c._applyLayout();
+      }, width);
+      let first;
+      for (const phase of [
+        "ready",
+        "starting",
+        "recording",
+        "stopping",
+        "recorded",
+        "sending",
+        "sent",
+        "error",
+      ]) {
+        await page.locator("homecall-card").evaluate((c, phase) => {
+          c._phase = phase;
+          c._button("Mikrofon starten");
+          c._applyLayout();
+        }, phase);
+        const current = await geometry(page);
+        if (!first) first = current;
+        expect(current.size, `${width} ${phase}`).toBe(first.size);
+        expect(current.top, `${width} ${phase}`).toBe(first.top);
+        expect(current.leftInset).toBe(first.leftInset);
+        expect(current.rightInset).toBe(first.rightInset);
+        expect(current.bottomInset).toBe(first.bottomInset);
+        if (phase === "recording") {
+          expect(current.discardGap, `${width} discard`).toBeGreaterThanOrEqual(
+            7.9,
+          );
+          expect(current.timerGap, `${width} timer`).toBeGreaterThanOrEqual(
+            7.9,
+          );
+        }
+      }
+      expect(first.size, `${width}: must not shrink`).toBeGreaterThanOrEqual(
+        previousSize,
+      );
+      if (!picker && width >= 172)
+        expect(
+          first.size,
+          `${width}: usable microphone size`,
+        ).toBeGreaterThanOrEqual(56);
+      if (width >= 199.5 && width <= 200.5)
+        expect(first.size - previousSize).toBeLessThanOrEqual(1);
+      previousSize = first.size;
+      sizes.set(width, first.size);
+    }
+    // Resize the mounted card back down as a user drags the window narrower.
+    for (const width of [203.5, 200, 199.5, 193.5, 177.5, 172]) {
+      await page.locator("homecall-card").evaluate((c, width) => {
+        c.style.width = width + "px";
+      }, width);
+      await expect
+        .poll(async () => (await geometry(page)).size)
+        .toBe(sizes.get(width));
+      const resized = await geometry(page);
+      expect(resized.size).toBeLessThanOrEqual(previousSize);
+      previousSize = resized.size;
+    }
+  });
+}

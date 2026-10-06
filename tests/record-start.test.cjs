@@ -44,6 +44,7 @@ function advance(ms) {
 function node() {
   const classes = new Set();
   return {
+    dataset: {},
     classes,
     classList: {
       toggle(n, on) {
@@ -70,42 +71,28 @@ function fixture() {
       return nodes.get(s);
     },
   };
-  c._queueStartingIndicator();
+  c._button("Vorbereitung …");
   c._syncPhase();
   return { c, nodes };
 }
 const fast = fixture();
-assert.equal(fast.nodes.get(".main").loading, false);
+assert.equal(fast.nodes.get(".main").loading, true);
 assert.equal(fast.nodes.get(".main").attrs["aria-busy"], "true");
-assert.equal(fast.nodes.get(".time").hidden, false);
+assert.equal(fast.nodes.get(".main").attrs["aria-label"], "Preparing …");
+assert.equal(fast.nodes.get(".action-label").textContent, "Preparing");
+assert.equal(timers.size, 0);
 assert.ok(fast.nodes.get(".message-control").classes.has("sr-only"));
 assert.equal(fast.nodes.get(".status-more").hidden, true);
+assert.equal(fast.nodes.get(".time").hidden, true);
 assert.equal(fast.c._view.dataset.tone, "blue");
-assert.equal(fast.nodes.get(".main").variant, "brand");
-advance(299);
-assert.equal(fast.nodes.get(".main").loading, false);
+advance(300);
 fast.c._phase = "recording";
-fast.c._release();
-fast.c._syncPhase();
-advance(1);
+fast.c._button("Sprich jetzt");
 assert.equal(fast.nodes.get(".main").loading, false);
-assert.equal(fast.nodes.get(".action-label"), undefined);
+assert.equal(fast.nodes.get(".action-label").textContent, "Speak now");
 assert.equal(fast.c._view.dataset.tone, "red");
 assert.equal(fast.nodes.get(".main").variant, "danger");
-const slow = fixture();
-advance(300);
-assert.equal(slow.nodes.get(".main").loading, false);
-assert.equal(
-  slow.nodes.get(".action-label").textContent,
-  "Preparing microphone …",
-);
-assert.ok(slow.nodes.get(".message-control").classes.has("sr-only"));
-slow.c._release();
-const cancelled = fixture();
-cancelled.c._session = Symbol();
-advance(300);
-assert.equal(cancelled.c._startingIndicator, false);
-assert.equal(cancelled.nodes.get(".action-label"), undefined);
+assert.equal(fast.nodes.get(".time").hidden, false);
 for (const phase of [
   "loading",
   "ready",
@@ -126,5 +113,5 @@ for (const phase of [
   assert.equal(fast.nodes.get(".main").variant, "brand");
 }
 console.log(
-  "Passed: fast startup skips transient elements, slow startup gets delayed progress, footer controls stay stable, cancelled sessions cannot update the UI.",
+  "Passed: startup feedback is immediate, capture stays blue until ready, and recording replaces preparation without a timer.",
 );

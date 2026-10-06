@@ -1,4 +1,4 @@
-/*! HomeCall Card v1.2.2 | MIT License | github.com/thomasgregg/homecall-card */
+/*! HomeCall Card v1.3.0 | MIT License | github.com/thomasgregg/homecall-card */
 (() => {
   // src/layout.js
   function homeCallLayout(width, height, hasSelector = true, selectorWidth = 100, footerWidths = null) {
@@ -25,6 +25,7 @@
         icon: Math.round(button2 * 0.56)
       };
     }
+    const minimumButton = height <= 120 ? 24 : 52;
     const compact = width < 280 || height < 240, tiny = width < 200 || height < 200;
     const padding = tiny ? 8 : compact ? 12 : 20, selectorTop = tiny ? 6 : compact ? 8 : 10;
     const cornerX = Math.max(0, width / 2 - padding - selectorWidth);
@@ -37,8 +38,9 @@
       borderY: 1
     };
     const narrow = width < 200;
-    const discardHeight = narrow ? 32 : 44;
-    const timerHeight = narrow ? 24 : 32;
+    const narrowClearance = narrow;
+    const discardHeight = narrowClearance ? 32 : 44;
+    const timerHeight = narrowClearance ? 24 : 32;
     const footerDistance = Math.min(
       ...[
         [footer.discard, discardHeight],
@@ -50,7 +52,10 @@
         )
       )
     );
-    const footerLimit = 2 * Math.max(26, footerDistance - 8) / 1.18;
+    const footerLimit = Math.max(
+      minimumButton,
+      2 * (footerDistance - 8) / 1.18
+    );
     const labelSpace = 2 * Math.max(
       0,
       width / 2 - padding - (footer.borderX ?? 1) - Math.max(footer.discard, footer.time) - 8
@@ -59,13 +64,13 @@
     const edgeFooter = !hasSelector && !showLabel && compact;
     const footerPadding = edgeFooter ? 8 : padding;
     const controlWidths = {
-      discard: narrow ? 32 : footer.discard,
+      discard: narrowClearance ? 32 : footer.discard,
       time: footer.time - (edgeFooter ? 13 : 0)
     };
     const labelLimit = showLabel ? (height / 2 - padding - (footer.borderY ?? 1) - 32 - 8) / 0.59 : Infinity;
     let button = Math.floor(
       Math.max(
-        52,
+        minimumButton,
         Math.min(
           240,
           width * 0.56,
@@ -88,7 +93,7 @@
           (height - 2 * padding - 2 * borderY) / 1.18
         )
       );
-      for (let candidate = maximum; candidate >= 52; candidate--) {
+      for (let candidate = maximum; candidate >= minimumButton; candidate--) {
         const radius = candidate * 0.59, minimumY = padding + borderY + radius;
         let maximumY = height - padding - borderY - radius;
         if (showLabel)
@@ -117,6 +122,15 @@
         }
       }
     }
+    if (narrow && height === 120) {
+      button = Math.min(
+        button,
+        homeCallLayout(200, height, hasSelector, selectorWidth, {
+          ...footer,
+          time: footer.regularTime ?? footer.time
+        }).button
+      );
+    }
     const visualHeight = Math.min(
       button * 1.44,
       height - 2 * padding,
@@ -143,7 +157,7 @@
   }
   function homeCallRecipientBounds(card, anchor, viewport, inset = 16, outside = false) {
     if (outside) {
-      const width = Math.min(280, Math.max(240, card.width), viewport.width - 16);
+      const width = Math.min(360, Math.max(320, card.width), viewport.width - 16);
       const below = viewport.height - anchor.bottom - 12;
       const above = anchor.top - 12;
       const maxHeight2 = Math.min(240, Math.max(below, above));
@@ -174,6 +188,100 @@
     const card = helpers.createCardElement({ type: "entities", entities: [] });
     await card.constructor.getConfigElement();
   }
+  async function homeCallNativeSpeakerControls(element, hass) {
+    await homeCallNativeForms();
+    const names = ["ha-list", "ha-check-list-item", "ha-expansion-panel"];
+    if (names.every((name) => customElements.get(name))) return;
+    const helpers = await window.loadCardHelpers();
+    helpers.createCardElement({
+      type: "todo-list",
+      entity: "todo.homecall_component_loader"
+    });
+    const form = document.createElement("ha-form");
+    form.hidden = true;
+    form.hass = hass;
+    form.data = {};
+    form.schema = [{ name: "settings", type: "expandable", schema: [] }];
+    element.shadowRoot.append(form);
+    let timeout;
+    try {
+      await Promise.race([
+        Promise.all(names.map((name) => customElements.whenDefined(name))),
+        new Promise((_, reject) => {
+          timeout = setTimeout(
+            () => reject(
+              new Error("Home Assistant speaker controls are unavailable.")
+            ),
+            1e4
+          );
+        })
+      ]);
+    } finally {
+      clearTimeout(timeout);
+      form.remove();
+    }
+  }
+  function homeCallSpeakerAvailable(target, hass) {
+    const state = hass?.states?.[target.entity_id]?.state;
+    return state === void 0 ? target.available : state !== "unavailable" && (!target.entity_id.startsWith("media_player.") || state !== "unknown");
+  }
+  function homeCallSpeakerIntegration(target) {
+    return {
+      dlna: "DLNA",
+      sonos: "Sonos",
+      music_assistant: "Music Assistant",
+      cast: "Google Cast",
+      echomuse: "EchoMuse"
+    }[target.transport] || (target.entity_id.startsWith("notify.") && target.entity_id.endsWith("_speak") ? "Alexa" : "");
+  }
+  function homeCallSpeakerDescription(target, language) {
+    const integration = homeCallSpeakerIntegration(target);
+    const status = language === "de" ? target.available ? "Verf\xFCgbar" : "Nicht verf\xFCgbar" : target.available ? "Available" : "Unavailable";
+    return [integration, status].filter(Boolean).join(" \xB7 ");
+  }
+  function homeCallSpeakerList(targets, selected, language, allowUnavailable, onChange) {
+    const list = document.createElement("ha-list");
+    list.className = "speaker-list";
+    list.multi = true;
+    list.wrapFocus = true;
+    list.setAttribute(
+      "aria-label",
+      language === "de" ? "Lautsprecher" : "Speakers"
+    );
+    for (const target of targets) {
+      const row = document.createElement("ha-check-list-item");
+      row.value = target.entity_id;
+      row.left = true;
+      row.twoline = true;
+      const name = document.createElement("span");
+      name.textContent = target.name;
+      const description = document.createElement("span");
+      description.slot = "secondary";
+      description.textContent = homeCallSpeakerDescription(target, language);
+      row.append(name, description);
+      row.title = target.name + " \xB7 " + description.textContent;
+      row.selected = selected.includes(target.entity_id);
+      row.disabled = !allowUnavailable && !target.available;
+      row.addEventListener("request-selected", (event) => {
+        if (event.target === row && !row.disabled && typeof event.detail?.selected === "boolean")
+          onChange(row.value, event.detail.selected);
+      });
+      list.append(row);
+    }
+    return list;
+  }
+  function homeCallSyncSpeakerList(list, targets, selected, language, allowUnavailable) {
+    if (!list) return;
+    for (const row of list.children) {
+      const target = targets.find((target2) => target2.entity_id === row.value);
+      if (!target) continue;
+      row.selected = selected.includes(row.value);
+      row.disabled = !allowUnavailable && !target.available;
+      const description = homeCallSpeakerDescription(target, language);
+      row.querySelector('[slot="secondary"]').textContent = description;
+      row.title = target.name + " \xB7 " + description;
+    }
+  }
   var HOMECALL_EN = {
     Verwerfen: "Discard",
     "Alle Lautsprecher": "All speakers",
@@ -182,7 +290,6 @@
     "Neue Durchsage": "New announcement",
     "Erneut versuchen": "Retry",
     "Tippe auf das Mikrofon": "Tap the microphone",
-    "Tippe auf das Mikrofon und sprich.": "Tap the microphone and speak.",
     "Ger\xE4te werden geladen \u2026": "Loading devices \u2026",
     "Ger\xE4te konnten nicht geladen werden.": "Could not load devices.",
     "HomeCall \xF6ffnen": "Open HomeCall",
@@ -194,7 +301,12 @@
     "Kein Lautsprecher ausgew\xE4hlt": "No speaker selected",
     "Alle ausw\xE4hlen": "Select all",
     Bereit: "Ready",
-    Aufnehmen: "Record",
+    "Mikrofon starten": "Start microphone",
+    "Vorbereitung \u2026": "Preparing \u2026",
+    Laden: "Loading",
+    Startet: "Preparing",
+    Beenden: "Finishing",
+    "Bereit zum Senden": "Ready to send",
     Senden: "Send",
     Schlie\u00DFen: "Close",
     Mikrofonpegel: "Microphone level",
@@ -202,8 +314,6 @@
     "Mikrofon wird vorbereitet \u2026": "Preparing microphone \u2026",
     "Sprich jetzt": "Speak now",
     "Aufnahme wird abgeschlossen \u2026": "Finishing recording \u2026",
-    "Aufnahme pr\xFCfen": "Review recording",
-    "Aufnahme pr\xFCfen \u2013 bereit zum Senden.": "Review recording \u2013 ready to send.",
     "Aufnahme konnte nicht vollst\xE4ndig abgeschlossen werden.": "Could not finish the complete recording.",
     "AudioWorklet ist nicht verf\xFCgbar. Bitte Browser aktualisieren.": "AudioWorklet is unavailable. Please update your browser.",
     "Aufnahmemodul konnte nicht geladen werden. Bitte HomeCall-Integration aktualisieren.": "Could not load the recorder. Please update the HomeCall integration.",
@@ -212,7 +322,6 @@
     "Diagnose kopieren": "Copy diagnostics",
     Kopiert: "Copied",
     "Kopieren nicht m\xF6glich. Bitte Text ausw\xE4hlen.": "Could not copy. Please select the text.",
-    "Aufnahme anh\xF6ren": "Listen to recording",
     "Wird gesendet": "Sending",
     "Deine Nachricht wird vorbereitet \u2026": "Preparing your message \u2026",
     "HomeCall ist noch nicht bereit.": "HomeCall is not ready yet.",
@@ -230,6 +339,8 @@
     "An die Lautsprecher gesendet. Der Audioabruf ist noch nicht best\xE4tigt.": "Sent to the speakers. Audio retrieval has not been confirmed yet.",
     "An {count} Lautsprecher gesendet.": "Sent to {count} speakers.",
     "Einige Ger\xE4te konnten nicht erreicht werden.": "Some devices could not be reached.",
+    "Diese Lautsprecher werden \xFCbersprungen: {speakers}.": "These speakers will be skipped: {speakers}.",
+    "\xDCbersprungen: {speakers}.": "Skipped: {speakers}.",
     "Eine Durchsage wird gerade gesendet.": "An announcement is already being sent.",
     "Bitte erreichbare Lautsprecher ausw\xE4hlen.": "Please select available speakers.",
     "Aufnahme ist zu gro\xDF.": "The recording is too large.",
@@ -260,6 +371,31 @@
       if (changed || !this._view) this._render();
       else if (this._phase === "error" && this._availabilityError && this._availabilitySnapshot !== this._availabilityState())
         this._retryAvailability();
+      else if (this._phase === "ready" && this._targets && this._view?.querySelector(".speaker-list")) {
+        const targets = this._targets.map((target) => ({
+          ...target,
+          available: homeCallSpeakerAvailable(target, hass)
+        }));
+        if (targets.some(
+          (target, index) => target.available !== this._targets[index].available
+        )) {
+          this._targets = targets;
+          this._skippedTargets = [
+            .../* @__PURE__ */ new Set([
+              ...this._skippedTargets || [],
+              ...this._selection.filter(
+                (id) => !targets.some(
+                  (target) => target.entity_id === id && target.available
+                )
+              )
+            ])
+          ];
+          this._selection = this._selection.filter(
+            (id) => targets.some((target) => target.entity_id === id && target.available)
+          );
+          this._updateSelection();
+        }
+      }
     }
     _availabilityState() {
       return JSON.stringify(
@@ -293,6 +429,28 @@
       this._view.querySelector(".action-label").textContent = this._t(text);
       this._syncPhase();
     }
+    _syncCaption() {
+      const label = this._view.querySelector(".action-label");
+      const caption = {
+        loading: "Laden",
+        starting: "Startet",
+        recording: "Sprich jetzt",
+        stopping: "Beenden",
+        recorded: "Bereit zum Senden"
+      }[this._phase];
+      if (caption) label.textContent = this._t(caption);
+      label.hidden = !this._layout?.showLabel;
+      if (label.hidden) return;
+      const discard = this._view.querySelector(".discard"), time = this._view.querySelector(".time"), status = this._view.querySelector(".status-more");
+      label.style.maxWidth = discard.hidden && time.hidden ? Math.max(
+        0,
+        this._view.querySelector(".info").clientWidth - (status.hidden ? 0 : 2 * (status.getBoundingClientRect().width + 8))
+      ) + "px" : "";
+      const fits = () => label.scrollHeight <= 32 && label.scrollWidth <= label.clientWidth + 1;
+      if (!fits() && this._phase === "recorded")
+        label.textContent = this._t("Senden");
+      label.hidden = !fits();
+    }
     static async getConfigElement() {
       await homeCallNativeForms();
       return document.createElement("homecall-card-editor");
@@ -317,12 +475,12 @@ ha-card{display:flex;position:relative;flex-direction:column;box-sizing:border-b
 ha-card[data-tone="red"]{--homecall-tone:var(--ha-color-fill-danger-loud-resting,var(--error-color))}[hidden]{display:none!important}.header{display:flex;align-items:center;justify-content:space-between;gap:12px;min-height:44px;position:absolute;top:var(--homecall-selector-top);inset-inline:var(--homecall-padding);z-index:2;pointer-events:none}
 .targets{margin:0 0 0 auto;max-width:100%;flex:none;pointer-events:auto;color:var(--secondary-text-color);font-size:var(--ha-font-size-m)}.targets summary{display:flex;align-items:center;justify-content:flex-end;gap:4px;cursor:pointer;list-style:none;min-height:44px;min-width:44px;max-width:100%;border-radius:var(--homecall-control-radius);padding-inline:6px;margin-inline-end:calc(var(--homecall-content-inset) - 6px);-webkit-tap-highlight-color:transparent}.targets summary span{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.targets summary::-webkit-details-marker{display:none}.targets summary:focus-visible{outline:2px solid var(--ha-color-focus);outline-offset:2px}.targets summary ha-icon{--mdc-icon-size:18px;flex:none}.targets .speaker-icon{display:none}.targets[open] .chevron{transform:rotate(180deg)}.targets summary[aria-disabled="true"]{color:var(--disabled-text-color);cursor:default}
 .list,.status-popover{position:fixed;inset:auto;margin:0;box-sizing:border-box;color:var(--primary-text-color);font:var(--ha-font-size-m)/var(--ha-line-height-normal) var(--primary-font-family,Roboto,sans-serif);padding:8px 12px;overflow:auto;overscroll-behavior:contain;background:var(--ha-card-background,var(--card-background-color));border:1px solid var(--divider-color);border-radius:var(--ha-border-radius-lg);box-shadow:var(--ha-box-shadow-l)}.list{overflow-x:hidden}.status-popover{padding:16px;overflow-wrap:anywhere}.list ha-checkbox.all{display:flex;min-height:44px;border-bottom:1px solid var(--divider-color);margin-bottom:4px;padding-bottom:4px}
-.action{display:flex;position:absolute;inset:0;pointer-events:none;flex-direction:column;align-items:center;justify-content:center}.visual{transform:translateY(var(--homecall-action-offset,0px));position:relative;display:flex;align-items:center;justify-content:center;width:calc(100% - 2*var(--homecall-padding));height:var(--homecall-visual-height,calc(var(--homecall-button-size)*1.44));max-height:calc(100% - 2*var(--homecall-padding));flex:none;isolation:isolate}.halo{position:absolute;width:calc(var(--homecall-button-size)*1.18);height:calc(var(--homecall-button-size)*1.18);border-radius:50%;background:var(--homecall-tone);opacity:.18;pointer-events:none;z-index:-1}.wave{position:absolute;inset:0;width:100%;height:100%;opacity:0;pointer-events:none;z-index:-2}.recording .wave,ha-card[data-phase="recorded"] .wave{opacity:.24}
-.recording .halo{opacity:.18;background:conic-gradient(var(--homecall-tone) var(--homecall-recording-progress,0deg),transparent 0);mask:radial-gradient(circle,transparent 60%,black 61%)}ha-card[data-phase="recorded"] .action-label{white-space:normal;font-size:var(--ha-font-size-s,12px);line-height:16px}
-.main{pointer-events:auto;--ha-button-height:var(--homecall-button-size);--ha-button-border-radius:50%;--ha-button-box-shadow:none;flex:none}.main::part(base){width:var(--homecall-button-size);padding:0}.main::part(label){display:flex;align-items:center;justify-content:center}.main::part(spinner){font-size:var(--homecall-icon-size)}.main ha-icon{--mdc-icon-size:var(--homecall-icon-size)}.main[data-kind="send-outline"] ha-icon{--mdc-icon-size:calc(var(--homecall-icon-size)*.75)}.action-label{position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);font-size:var(--ha-font-size-m);font-weight:var(--ha-font-weight-medium);line-height:20px;max-width:var(--homecall-label-space);text-align:center;color:var(--primary-text-color);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;flex:none}
+.action{display:flex;position:absolute;inset:0;pointer-events:none;flex-direction:column;align-items:center;justify-content:center}.visual{transform:translateY(var(--homecall-action-offset,0px));position:relative;display:flex;align-items:center;justify-content:center;width:calc(100% - 2*var(--homecall-padding));height:var(--homecall-visual-height,calc(var(--homecall-button-size)*1.44));max-height:calc(100% - 2*var(--homecall-padding));flex:none;isolation:isolate}.halo{position:absolute;width:calc(var(--homecall-button-size)*1.18);height:calc(var(--homecall-button-size)*1.18);border-radius:50%;background:var(--homecall-tone);opacity:.18;pointer-events:none;z-index:-1}.wave{position:absolute;inset:0;width:100%;height:100%;opacity:0;pointer-events:none;z-index:-2}ha-card[data-phase="recording"] .wave,ha-card[data-phase="recorded"] .wave{opacity:.24}
+ha-card[data-phase="starting"] .halo{opacity:.08}ha-card[data-phase="recording"] .halo{opacity:1;background:none;mask:radial-gradient(circle,transparent 60%,black 61%)}ha-card[data-phase="recording"] .halo::before,ha-card[data-phase="recording"] .halo::after{content:"";position:absolute;inset:0;border-radius:inherit}ha-card[data-phase="recording"] .halo::before{background:var(--homecall-tone);opacity:.16}ha-card[data-phase="recording"] .halo::after{background:conic-gradient(var(--homecall-tone) var(--homecall-recording-progress,0deg),transparent 0);opacity:.46}
+.main{pointer-events:auto;--ha-button-height:var(--homecall-button-size);--ha-button-border-radius:50%;--ha-button-box-shadow:none;flex:none}.main::part(base){width:var(--homecall-button-size);padding:0}.main::part(label){display:flex;align-items:center;justify-content:center}.main::part(spinner){font-size:var(--homecall-icon-size)}.main ha-icon{--mdc-icon-size:var(--homecall-icon-size)}.main[data-kind="send-outline"] ha-icon{--mdc-icon-size:calc(var(--homecall-icon-size)*.75)}.action-label{position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);font-size:var(--ha-font-size-m);font-weight:var(--ha-font-weight-medium,500);line-height:16px;max-width:var(--homecall-label-space);text-align:center;color:var(--primary-text-color);white-space:normal;flex:none}
 ha-card[data-edge-footer="true"] .info{bottom:8px;inset-inline:8px}ha-card[data-edge-footer="true"] .time{padding-inline-end:0}
 ha-card[data-narrow="true"] .info{height:32px;min-height:32px;align-items:flex-end}ha-card[data-narrow="true"] .discard{--ha-button-height:32px}ha-card[data-narrow="true"] .discard::part(base){min-width:32px;padding:0 5px}ha-card[data-narrow="true"] .time{font-size:12px;line-height:24px;gap:6px}
-.info{display:flex;position:absolute;bottom:var(--homecall-padding);inset-inline:var(--homecall-padding);pointer-events:none;align-items:center;justify-content:space-between;gap:8px;height:44px;min-height:44px;flex:none;color:var(--secondary-text-color);font-size:var(--ha-font-size-m);line-height:20px}.discard{pointer-events:auto;--ha-button-height:44px;--ha-button-border-radius:var(--homecall-control-radius);--ha-button-box-shadow:none;flex:none}.discard::part(base){padding:0 12px;min-width:44px}.discard::part(label){display:flex;align-items:center;gap:8px;font-size:var(--ha-font-size-m);font-weight:400;line-height:20px}.discard ha-icon{--mdc-icon-size:20px}.message-control{display:flex;align-items:center;justify-content:center;min-width:0;gap:4px}.status{line-height:20px;overflow:hidden;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow-wrap:anywhere}.status-more{pointer-events:auto;flex:none;color:var(--secondary-text-color)}ha-card[data-phase="error"] .status-more{color:var(--error-color)}ha-card[data-phase="sent"] .status-more{color:var(--success-color)}.time{display:flex;align-items:center;gap:8px;margin-inline-start:auto;padding-inline-end:var(--homecall-content-inset);white-space:nowrap;font-variant-numeric:tabular-nums}.recording .time:before{content:'';display:block;width:8px;height:8px;flex:none;border-radius:50%;background:var(--ha-color-fill-danger-loud-resting,var(--error-color))}
+.info{display:flex;position:absolute;bottom:var(--homecall-padding);inset-inline:var(--homecall-padding);pointer-events:none;align-items:center;justify-content:space-between;gap:8px;height:44px;min-height:44px;flex:none;color:var(--secondary-text-color);font-size:var(--ha-font-size-m);line-height:20px}.discard{pointer-events:auto;--ha-button-height:44px;--ha-button-border-radius:var(--homecall-control-radius);--ha-button-box-shadow:none;flex:none}.discard::part(base){padding:0 12px;min-width:44px}.discard::part(label){display:flex;align-items:center;gap:8px;font-size:var(--ha-font-size-m);font-weight:400;line-height:20px}.discard ha-icon{--mdc-icon-size:20px}.message-control{display:flex;align-items:center;justify-content:center;min-width:0;gap:4px}.status{line-height:20px;overflow:hidden;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow-wrap:anywhere}.status-more{pointer-events:auto;flex:none;color:var(--secondary-text-color)}ha-card[data-phase="error"] .status-more ha-icon{color:var(--error-color)}ha-card[data-phase="sent"] .status-more ha-icon{color:var(--success-color)}ha-card[data-phase="ready"][data-skipped-targets="true"] .status-more ha-icon,ha-card[data-phase="sent"][data-partial-send="true"] .status-more ha-icon{color:var(--warning-color,var(--error-color))}.time{display:flex;align-items:center;gap:8px;margin-inline-start:auto;padding-inline-end:var(--homecall-content-inset);white-space:nowrap;font-variant-numeric:tabular-nums}ha-card[data-phase="recording"] .time:before{content:'';display:block;width:8px;height:8px;flex:none;border-radius:50%;background:var(--ha-color-fill-danger-loud-resting,var(--error-color))}
 .sr-only{position:absolute!important;width:1px!important;height:1px!important;padding:0!important;margin:-1px!important;overflow:hidden!important;clip:rect(0,0,0,0)!important;white-space:nowrap!important;border:0!important}
 ha-card[data-compact="true"] .targets summary{justify-content:center;margin-inline-end:calc(var(--homecall-content-inset) - 11px);padding-inline:0}ha-card[data-compact="true"] .targets summary span,ha-card[data-compact="true"] .targets .chevron{display:none}ha-card[data-compact="true"] .targets .speaker-icon{display:block;--mdc-icon-size:22px}ha-card[data-compact="true"] .discard .discard-label{display:none}ha-card[data-compact="true"] .message-control{gap:0}
 ha-card[data-narrow="true"]{--homecall-control-size:32px}
@@ -395,14 +553,24 @@ ha-card[data-short="true"]:has(.header[hidden]) .time{top:calc(50% - 7px)}
         },
         true
       );
-      this._view.querySelector(".main").onclick = () => this._phase === "ready" ? this._start() : ["recording", "recorded"].includes(this._phase) ? this._finish() : !["loading", "starting", "stopping", "sending"].includes(
-        this._phase
-      ) && this._reset();
-      this._visibility = () => {
-        if (document.hidden && ["starting", "recording"].includes(this._phase))
+      this._view.querySelector(".main").onclick = () => {
+        if (this._phase === "ready") this._start();
+        else if (["recording", "recorded"].includes(this._phase)) this._finish();
+        else if (this._phase === "sent" && this._partialSend) {
           this._reset();
-        else if (!document.hidden && this._phase === "error" && this._availabilityError)
-          this._retryAvailability();
+          this._start();
+        } else if (!["loading", "starting", "stopping", "sending"].includes(this._phase))
+          this._reset();
+      };
+      this._visibility = () => {
+        if (document.hidden) {
+          if (["starting", "recording"].includes(this._phase)) this._reset();
+          if (this._phase !== "stopping") this._release();
+        } else {
+          if (this._phase === "error" && this._availabilityError)
+            this._retryAvailability();
+          else if (this._phase === "ready") this._warmRecorder();
+        }
       };
       document.addEventListener("visibilitychange", this._visibility);
       this._dismissTargets = (event) => {
@@ -419,7 +587,7 @@ ha-card[data-short="true"]:has(.header[hidden]) .time{top:calc(50% - 7px)}
         this._view.querySelector("summary").getBoundingClientRect(),
         { width: window.innerWidth, height: window.innerHeight },
         Math.min(16, this._layout?.padding || 16),
-        !!this._layout?.short
+        !!this._layout?.short || this.clientWidth < 360
       );
       if (!bounds) return false;
       const list = this._view.querySelector(".list");
@@ -439,18 +607,23 @@ ha-card[data-short="true"]:has(.header[hidden]) .time{top:calc(50% - 7px)}
       this._view.dataset.compact = String(initial.compact);
       this._view.dataset.short = String(!!initial.short);
       this._view.dataset.narrow = String(width < 200);
+      const narrowFooter = width < 200;
       const measure = this._view.querySelector("canvas").getContext("2d");
-      measure.font = (width < 200 ? "12px " : "14px ") + getComputedStyle(this).fontFamily;
+      measure.font = (narrowFooter ? "12px " : "14px ") + getComputedStyle(this).fontFamily;
       const border = getComputedStyle(this._view);
       const footerWidths = {
         discard: initial.compact ? 46 : Math.ceil(measure.measureText(this._t("Verwerfen")).width) + 54,
-        time: Math.ceil(measure.measureText("00:00").width) + (width < 200 ? 21 : 29),
+        time: Math.ceil(measure.measureText("00:00").width) + (narrowFooter ? 21 : 29),
         borderX: Math.max(
           parseFloat(border.borderLeftWidth) || 0,
           parseFloat(border.borderRightWidth) || 0
         ),
         borderY: parseFloat(border.borderBottomWidth) || 0
       };
+      if (narrowFooter && height === 120) {
+        measure.font = "14px " + getComputedStyle(this).fontFamily;
+        footerWidths.regularTime = Math.ceil(measure.measureText("00:00").width) + 29;
+      }
       const summary = this._view.querySelector("summary");
       const selectorWidth = summary.getBoundingClientRect().width + parseFloat(getComputedStyle(summary).marginInlineEnd);
       const layout = homeCallLayout(
@@ -493,13 +666,15 @@ ha-card[data-short="true"]:has(.header[hidden]) .time{top:calc(50% - 7px)}
     _syncPhase() {
       if (!this._view) return;
       this._view.dataset.phase = this._phase;
+      this._view.dataset.partialSend = String(!!this._partialSend);
+      this._view.dataset.skippedTargets = String(!!this._skippedTargets?.length);
       const capturing = this._phase === "recording";
       this._view.dataset.tone = capturing ? "red" : "blue";
       this._view.querySelector(".main").variant = capturing ? "danger" : "brand";
       const active = ["starting", "recording", "recorded"].includes(this._phase), recording = ["recording", "recorded"].includes(this._phase), starting = this._phase === "starting", busy = this._phase === "loading" && this._loadingIndicator || ["stopping", "sending"].includes(this._phase);
       this._view.querySelector(".discard").hidden = !active;
-      this._view.querySelector(".time").hidden = !(recording || starting);
-      this._view.querySelector(".main").loading = busy;
+      this._view.querySelector(".time").hidden = !recording;
+      this._view.querySelector(".main").loading = busy || starting;
       this._view.querySelector(".main").setAttribute(
         "aria-busy",
         String(busy || starting || this._phase === "loading")
@@ -529,9 +704,10 @@ ha-card[data-short="true"]:has(.header[hidden]) .time{top:calc(50% - 7px)}
       const info = this._view.querySelector(".message-control"), status = this._view.querySelector(".status"), icon = this._view.querySelector(".status-more");
       info.classList.toggle("sr-only", this._phase === "recording" || starting);
       status.classList.toggle("sr-only", true);
-      const noSelection = this._phase === "ready" && this._selection?.length === 0, showDiagnostics = this.config?.show_diagnostics === true && !!this._diagnostics;
-      icon.hidden = this._phase === "sent" && !showDiagnostics || this._phase === "recorded" && !this.config?.preview_before_send || this._phase === "loading" && !this._loadingIndicator || ["recording", "stopping", "sending"].includes(this._phase) || starting || this._phase === "ready" && !noSelection && !showDiagnostics;
-      icon.innerHTML = `<ha-icon icon="mdi:${this._phase === "sent" ? "check-circle-outline" : this._phase === "error" || noSelection ? "alert-circle-outline" : "clock-outline"}"></ha-icon>`;
+      const noSelection = this._phase === "ready" && this._selection?.length === 0, skipped = this._phase === "ready" && !!this._skippedTargets?.length, showDiagnostics = this.config?.show_diagnostics === true && !!this._diagnostics;
+      icon.hidden = this._phase === "sent" && !this._partialSend && !showDiagnostics || this._phase === "recorded" || ["loading", "recording", "stopping", "sending"].includes(this._phase) || starting || this._phase === "ready" && !noSelection && !skipped && !showDiagnostics;
+      icon.innerHTML = `<ha-icon icon="mdi:${this._phase === "error" || noSelection || skipped || this._phase === "sent" && this._partialSend ? "alert-circle-outline" : this._phase === "sent" ? "check-circle-outline" : "clock-outline"}"></ha-icon>`;
+      this._syncCaption();
     }
     _showStatus() {
       const popover = this._view.querySelector(".status-popover");
@@ -548,21 +724,6 @@ ha-card[data-short="true"]:has(.header[hidden]) .time{top:calc(50% - 7px)}
       popover.style.left = Math.max(16, Math.min(anchor.left, window.innerWidth - width - 16)) + "px";
       popover.style.maxHeight = Math.max(80, Math.min(240, window.innerHeight - 32)) + "px";
       popover.textContent = this._view.querySelector(".status").textContent;
-      if (this._previewUrl) {
-        const audio = document.createElement("audio");
-        audio.controls = true;
-        audio.src = this._previewUrl;
-        audio.setAttribute("aria-label", this._t("Aufnahme anh\xF6ren"));
-        audio.style.cssText = "display:block;width:100%;margin-top:12px";
-        popover.append(audio);
-        if (this._phase === "recorded") {
-          const send = document.createElement("ha-button");
-          send.className = "preview-send";
-          send.textContent = this._t("Senden");
-          send.onclick = () => this._finish();
-          popover.append(send);
-        }
-      }
       if (this.config?.show_diagnostics === true && this._diagnostics) {
         const details = document.createElement("details");
         const summary = document.createElement("summary");
@@ -623,6 +784,9 @@ ha-card[data-short="true"]:has(.header[hidden]) .time{top:calc(50% - 7px)}
     }
     async _load() {
       this._availabilityError = false;
+      this._skippedTargets = [];
+      this._recordingSkippedTargets = [];
+      this._partialSend = false;
       const session = Symbol();
       this._session = session;
       this._chunks = [];
@@ -647,7 +811,7 @@ ha-card[data-short="true"]:has(.header[hidden]) .time{top:calc(50% - 7px)}
         "Ger\xE4te werden geladen \u2026"
       );
       try {
-        await homeCallNativeForms();
+        await homeCallNativeSpeakerControls(this, this._hass);
         if (session !== this._session) return;
         const response = await this._hass.fetchWithAuth("/api/homecall/status");
         const data = await response.json();
@@ -660,8 +824,9 @@ ha-card[data-short="true"]:has(.header[hidden]) .time{top:calc(50% - 7px)}
         this._fillTargets(data.targets);
         this._phase = "ready";
         this._setStatus("Tippe auf das Mikrofon");
-        this._button("Aufnehmen");
+        this._button("Mikrofon starten");
         this._updateSelection();
+        this._warmRecorder();
       } catch (error) {
         if (session !== this._session) return;
         this._phase = "error";
@@ -687,79 +852,108 @@ ha-card[data-short="true"]:has(.header[hidden]) .time{top:calc(50% - 7px)}
     _reset() {
       if (!this._view) return;
       this._session = Symbol();
-      this._clearPreview();
       clearTimeout(this._readyTimer);
       clearTimeout(this._receiptTimer);
-      this._release();
+      this._release(this._phase !== "starting");
       this._chunks = [];
       this._samples = 0;
+      this._partialSend = false;
+      this._recordingSkippedTargets = [];
       this._started = 0;
       this._levels = Array(64).fill(0);
       this._view.querySelector(".targets").open = false;
       const status = this._view.querySelector(".status-popover");
       if (status.matches(":popover-open")) status.hidePopover();
-      this._view.classList.remove("recording");
       this._view.querySelector(".time").textContent = "1:00";
-      if (this._availabilityError || !this._view.querySelector(".echo-form") || !this._targets?.some((t) => t.available)) {
+      if (this._availabilityError || !this._view.querySelector(".speaker-list") || !this._targets?.some((t) => t.available)) {
         this._retryAvailability();
         return;
       }
       this._phase = "ready";
-      this._button("Aufnehmen");
-      this._setStatus(
-        this._selection.length ? "Tippe auf das Mikrofon" : "Bitte mindestens einen Lautsprecher ausw\xE4hlen."
-      );
+      this._button("Mikrofon starten");
+      this._setStatus(this._readyStatus());
       this._view.querySelector(".main").disabled = !this._selection.length;
       this._draw();
+      this._warmRecorder();
     }
-    _queueStartingIndicator() {
-      clearTimeout(this._startingTimer);
-      this._startingIndicator = false;
-      const session = this._session;
-      this._startingTimer = setTimeout(() => {
-        if (session !== this._session || !this._view || this._phase !== "starting")
-          return;
-        this._startingIndicator = true;
-        const label = this._t("Mikrofon wird vorbereitet \u2026");
-        const button = this._view.querySelector(".main");
-        button.setAttribute("aria-label", label);
-        button.title = label;
-        this._view.querySelector(".action-label").textContent = label;
-        this._syncPhase();
-      }, 300);
+    _warmRecorder() {
+      if (document.hidden || !window.isSecureContext) return;
+      try {
+        this._prepareRecorder(true).loaded.catch(() => {
+        });
+      } catch {
+      }
+    }
+    _prepareRecorder(idle = false) {
+      if (this._recorderPreparation?.context.state === "closed")
+        this._disposeRecorder();
+      if (this._recorderPreparation) return this._recorderPreparation;
+      const context = new (window.AudioContext || window.webkitAudioContext)({
+        sampleRate: 48e3
+      });
+      if (!context.audioWorklet || !window.AudioWorkletNode) {
+        context.close().catch(() => {
+        });
+        throw new Error(
+          "AudioWorklet ist nicht verf\xFCgbar. Bitte Browser aktualisieren."
+        );
+      }
+      const preparation = { context, ready: false };
+      this._recorderPreparation = preparation;
+      preparation.idle = idle ? context.suspend() : Promise.resolve();
+      preparation.loaded = Promise.all([
+        preparation.idle,
+        context.audioWorklet.addModule(
+          "/homecall-assets/homecall-recorder-worklet.js?v=1"
+        )
+      ]).then(
+        () => {
+          preparation.ready = true;
+        },
+        () => {
+          if (this._recorderPreparation === preparation) this._disposeRecorder();
+          throw new Error(
+            "Aufnahmemodul konnte nicht geladen werden. Bitte HomeCall-Integration aktualisieren."
+          );
+        }
+      );
+      preparation.loaded.catch(() => {
+      });
+      return preparation;
+    }
+    _disposeRecorder() {
+      const preparation = this._recorderPreparation;
+      this._recorderPreparation = null;
+      preparation?.context.close().catch(() => {
+      });
     }
     async _start() {
       if (!this._view || this._phase !== "ready" || !this._selection.length)
         return;
       const session = this._session;
       this._recordingTargets = [...this._selection];
-      this._clearPreview();
+      this._recordingSkippedTargets = [...this._skippedTargets || []];
       this._diagnostics = {
-        card_version: false ? "development" : "1.2.2",
+        card_version: false ? "development" : "1.3.0",
         browser_timings_ms: {}
       };
       const tapped = performance.now();
       this._phase = "starting";
       this._view.querySelector(".targets").open = false;
-      this._queueStartingIndicator();
+      this._button("Vorbereitung \u2026");
       this._setStatus("Mikrofon wird vorbereitet \u2026");
       try {
         if (!window.isSecureContext || !navigator.mediaDevices?.getUserMedia)
           throw new Error(
             "Das Mikrofon ben\xF6tigt HTTPS. Bitte eine sichere HA-Adresse verwenden."
           );
-        const context = new (window.AudioContext || window.webkitAudioContext)({
-          sampleRate: 48e3
-        });
+        const preparation = this._prepareRecorder(), context = preparation.context;
+        this._diagnostics.recorder_prepared_before_tap = preparation.ready;
         this._context = context;
         context.onstatechange = () => {
           if (session === this._session && ["recording", "stopping"].includes(this._phase) && context.state !== "running")
             this._recorderFailed(session, "context_interrupted");
         };
-        if (!context.audioWorklet || !window.AudioWorkletNode)
-          throw new Error(
-            "AudioWorklet ist nicht verf\xFCgbar. Bitte Browser aktualisieren."
-          );
         const resumed = context.resume();
         const [stream] = await Promise.all([
           navigator.mediaDevices.getUserMedia({
@@ -786,15 +980,14 @@ ha-card[data-short="true"]:has(.header[hidden]) .time{top:calc(50% - 7px)}
             }
             return stream2;
           }),
-          context.audioWorklet.addModule("/homecall-assets/homecall-recorder-worklet.js?v=1").catch(() => {
-            throw new Error(
-              "Aufnahmemodul konnte nicht geladen werden. Bitte HomeCall-Integration aktualisieren."
-            );
-          }),
+          preparation.loaded,
+          preparation.idle,
           resumed
         ]);
         if (session !== this._session || !this._view || this._phase !== "starting")
           return;
+        if (context.state !== "running") await context.resume();
+        if (session !== this._session || this._phase !== "starting") return;
         this._sampleRate = context.sampleRate;
         this._samples = 0;
         this._chunks = [];
@@ -869,16 +1062,9 @@ ha-card[data-short="true"]:has(.header[hidden]) .time{top:calc(50% - 7px)}
         await ready;
         if (session !== this._session || !this._view || this._phase !== "starting")
           return;
-        clearTimeout(this._startingTimer);
-        this._startingIndicator = false;
         this._phase = "recording";
-        this._view.classList.add("recording");
-        this._button(
-          this.config.preview_before_send ? "Aufnahme pr\xFCfen" : "Senden",
-          "microphone"
-        );
+        this._button("Senden", "microphone");
         this._setStatus("Sprich jetzt");
-        this._view.querySelector(".action-label").textContent = this._t("Sprich jetzt");
         this._draw();
       } catch (error) {
         if (session !== this._session) return;
@@ -903,7 +1089,6 @@ ha-card[data-short="true"]:has(.header[hidden]) .time{top:calc(50% - 7px)}
       this._release();
       this._chunks = [];
       this._phase = "error";
-      this._view?.classList.remove("recording");
       if (this._view) {
         this._setStatus(error.message);
         this._doneButton();
@@ -923,64 +1108,52 @@ ha-card[data-short="true"]:has(.header[hidden]) .time{top:calc(50% - 7px)}
       this._processor.port.postMessage({ type: "stop" });
       await this._recorderStopPromise;
     }
-    _clearPreview() {
-      const audio = this._view?.querySelector(".status-popover audio");
-      audio?.pause?.();
-      audio?.removeAttribute?.("src");
-      if (this._previewUrl) URL.revokeObjectURL(this._previewUrl);
-      this._previewUrl = null;
-    }
-    _preparePreview() {
-      this._clearPreview();
-      if (this.config?.preview_before_send && this._samples)
-        this._previewUrl = URL.createObjectURL(this._wav());
-    }
     _fillTargets(targets) {
       this._targets = targets;
-      if (!targets.some((t) => t.available))
-        throw new Error("Kein Lautsprecher ist gerade erreichbar.");
       this._selection = targets.filter(
         (t) => t.available && (this._defaultsAll || this._defaults.includes(t.entity_id))
       ).map((t) => t.entity_id);
+      const requested = this._defaultsAll ? targets.map((target) => target.entity_id) : this._defaults;
+      this._skippedTargets = [...new Set(requested)].filter(
+        (id) => !this._selection.includes(id)
+      );
+      if (!targets.some((t) => t.available))
+        throw new Error("Kein Lautsprecher ist gerade erreichbar.");
       const list = this._view.querySelector(".list");
-      list.innerHTML = '<ha-checkbox class="select-all all"></ha-checkbox><ha-form class="echo-form"></ha-form>';
-      const all = list.querySelector(".select-all");
+      list.replaceChildren();
+      const all = document.createElement("ha-checkbox");
+      all.className = "select-all all";
       all.textContent = this._t("Alle ausw\xE4hlen");
-      const form = list.querySelector("ha-form");
-      form.hass = this._hass;
-      form.computeLabel = () => "";
-      form.schema = [
-        {
-          name: "targets",
-          selector: {
-            select: {
-              multiple: true,
-              mode: "list",
-              options: targets.map((t) => ({
-                value: t.entity_id,
-                label: t.name + (t.available ? "" : " \xB7 offline"),
-                disabled: !t.available
-              }))
-            }
-          }
+      const speakers = homeCallSpeakerList(
+        targets,
+        this._selection,
+        this._lang,
+        false,
+        (id, checked) => {
+          if (this._selection.includes(id) === checked) return;
+          this._skippedTargets = this._skippedTargets.filter(
+            (value) => value !== id
+          );
+          this._selection = checked ? [.../* @__PURE__ */ new Set([...this._selection, id])] : this._selection.filter((value) => value !== id);
+          this._updateSelection();
         }
-      ];
-      form.data = { targets: this._selection };
-      form.addEventListener("value-changed", (event) => {
-        if (event.target !== form) return;
-        this._selection = (event.detail.value.targets || []).filter(
-          (id) => targets.some((t) => t.entity_id === id && t.available)
-        );
-        this._updateSelection();
-      });
+      );
+      list.append(all, speakers);
       all.addEventListener("change", () => {
-        this._selection = all.checked ? targets.filter((t) => t.available).map((t) => t.entity_id) : [];
-        form.data = { targets: this._selection };
+        this._selection = all.checked ? this._targets.filter((target) => target.available).map((target) => target.entity_id) : [];
+        this._skippedTargets = [];
         this._updateSelection();
       });
       this._updateSelection();
     }
     _updateSelection() {
+      homeCallSyncSpeakerList(
+        this._view.querySelector(".speaker-list"),
+        this._targets,
+        this._selection,
+        this._lang,
+        false
+      );
       const available = this._targets.filter((t) => t.available), count = this._selection.length, all = this._view.querySelector(".select-all");
       all.checked = count === available.length;
       all.indeterminate = count > 0 && count < available.length;
@@ -989,25 +1162,35 @@ ha-card[data-short="true"]:has(.header[hidden]) .time{top:calc(50% - 7px)}
       summary.querySelector("span").textContent = this._t(text, { count });
       summary.setAttribute("aria-label", this._t(text, { count }));
       summary.title = this._t(text, { count });
-      if (this._phase === "ready")
-        this._setStatus(
-          count ? "Tippe auf das Mikrofon" : "Bitte mindestens einen Lautsprecher ausw\xE4hlen."
-        );
+      if (this._phase === "ready") this._setStatus(this._readyStatus());
       if (["ready", "recording", "recorded"].includes(this._phase))
         this._view.querySelector(".main").disabled = count === 0;
       this._applyLayout();
+    }
+    _skippedStatus(ids, pending = false) {
+      if (!ids?.length) return "";
+      const speakers = ids.map((id) => {
+        const target = this._targets?.find((target2) => target2.entity_id === id);
+        if (!target) return id;
+        const integration = homeCallSpeakerIntegration(target);
+        return target.name + (integration ? " (" + integration + ")" : "");
+      });
+      return this._t(
+        pending ? "Diese Lautsprecher werden \xFCbersprungen: {speakers}." : "\xDCbersprungen: {speakers}.",
+        { speakers: speakers.join(", ") }
+      );
+    }
+    _readyStatus() {
+      const message = this._selection.length ? "Tippe auf das Mikrofon" : "Bitte mindestens einen Lautsprecher ausw\xE4hlen.";
+      const skipped = this._skippedStatus(this._skippedTargets, true);
+      return skipped ? this._selection.length ? skipped : this._t(message) + "\n" + skipped : message;
     }
     _stopAtLimit() {
       if (this._phase !== "recording") return;
       this._recordedAtLimit = true;
       this._phase = "recorded";
-      this._release();
-      this._preparePreview();
-      this._view.classList.remove("recording");
+      this._release(true);
       this._button("Senden", "send-outline");
-      this._view.querySelector(".action-label").textContent = this._t(
-        "Zeitlimit erreicht - bereit zum Senden."
-      );
       this._setStatus("Zeitlimit erreicht - bereit zum Senden.");
       this._draw();
     }
@@ -1064,14 +1247,16 @@ ha-card[data-short="true"]:has(.header[hidden]) .time{top:calc(50% - 7px)}
       }, 5e3);
     }
     _doneButton() {
+      if (this._phase === "sent" && this._partialSend) {
+        this._button("Mikrofon starten");
+        return;
+      }
       this._button(
         this._phase === "sent" ? "Neue Durchsage" : "Erneut versuchen",
         this._phase === "sent" ? "check" : "refresh"
       );
     }
-    _release() {
-      clearTimeout(this._startingTimer);
-      this._startingIndicator = false;
+    _release(keepRecorder = false) {
       clearTimeout(this._timer);
       cancelAnimationFrame(this._raf);
       clearTimeout(this._recorderReadyTimer);
@@ -1097,10 +1282,19 @@ ha-card[data-short="true"]:has(.header[hidden]) .time{top:calc(50% - 7px)}
       });
       this._trackEnded = null;
       this._stream = null;
-      if (this._context) this._context.onstatechange = null;
-      this._context?.close().catch(() => {
-      });
+      if (this._context) {
+        this._context.onstatechange = null;
+        if (this._context !== this._recorderPreparation?.context)
+          this._context.close().catch(() => {
+          });
+      }
       this._context = null;
+      const preparation = this._recorderPreparation;
+      if (keepRecorder && !document.hidden && preparation && preparation.context.state !== "closed") {
+        preparation.idle = preparation.context.suspend().catch(() => {
+          if (this._recorderPreparation === preparation) this._disposeRecorder();
+        });
+      } else this._disposeRecorder();
     }
     _wav() {
       const total = this._chunks.reduce((n, c) => n + c.length, 0);
@@ -1135,7 +1329,6 @@ ha-card[data-short="true"]:has(.header[hidden]) .time{top:calc(50% - 7px)}
     async _finish() {
       if (!["recording", "recorded"].includes(this._phase)) return;
       const session = this._session;
-      const wasRecording = this._phase === "recording";
       this._view.querySelector(".targets").open = false;
       this._phase = "stopping";
       this._button("Aufnahme wird abgeschlossen \u2026", "stop");
@@ -1152,22 +1345,11 @@ ha-card[data-short="true"]:has(.header[hidden]) .time{top:calc(50% - 7px)}
         this._recorderFailed(session);
         return;
       }
-      this._release();
-      this._view.classList.remove("recording");
+      this._release(true);
       this._diagnostics.captured_duration_seconds = this._samples / this._sampleRate;
       const status = this._view.querySelector(".status-popover");
       if (status.matches(":popover-open")) status.hidePopover();
-      if (wasRecording && this.config.preview_before_send) {
-        this._phase = "recorded";
-        this._preparePreview();
-        this._button("Senden", "send-outline");
-        this._setStatus("Aufnahme pr\xFCfen \u2013 bereit zum Senden.");
-        this._draw();
-        this._showStatus();
-        return;
-      }
       this._phase = "sending";
-      this._view.classList.remove("recording");
       const targets = [...this._recordingTargets || this._selection];
       this._button("Wird gesendet", "volume-high");
       this._view.querySelector(".main").disabled = true;
@@ -1206,12 +1388,14 @@ ha-card[data-short="true"]:has(.header[hidden]) .time{top:calc(50% - 7px)}
             "Die Lautsprecher haben die Durchsage nicht angenommen."
           );
         this._phase = "sent";
+        const skipped = this._skippedStatus(this._recordingSkippedTargets);
+        this._partialSend = sent < targets.length || !!skipped;
         this._setStatus(
-          this._t("An {count} Lautsprecher gesendet.", { count: sent }) + (sent < targets.length ? " " + this._t("Einige Ger\xE4te konnten nicht erreicht werden.") : "")
+          this._t("An {count} Lautsprecher gesendet.", { count: sent }) + (sent < targets.length ? " " + this._t("Einige Ger\xE4te konnten nicht erreicht werden.") : "") + (skipped ? "\n" + skipped : "")
         );
         this._doneButton();
         this._checkReceipt(data.receipt, 0);
-        if (sent === targets.length) this._scheduleReady();
+        if (!this._partialSend) this._scheduleReady();
       } catch (error) {
         if (session !== this._session) return;
         this._chunks = [];
@@ -1231,7 +1415,8 @@ ha-card[data-short="true"]:has(.header[hidden]) .time{top:calc(50% - 7px)}
         if (session !== this._session) return;
         if (data.diagnostics) this._diagnostics.server = data.diagnostics;
         if ((data.diagnostics?.audio_fetches ?? data.audio_fetches) > 0) {
-          this._setStatus("Deine Sprachnachricht wurde abgerufen.");
+          if (!this._partialSend)
+            this._setStatus("Deine Sprachnachricht wurde abgerufen.");
           return;
         }
       } catch {
@@ -1242,7 +1427,7 @@ ha-card[data-short="true"]:has(.header[hidden]) .time{top:calc(50% - 7px)}
           () => this._checkReceipt(receipt, attempt + 1),
           2e3
         );
-      else
+      else if (!this._partialSend)
         this._setStatus(
           "An die Lautsprecher gesendet. Der Audioabruf ist noch nicht best\xE4tigt."
         );
@@ -1253,7 +1438,6 @@ ha-card[data-short="true"]:has(.header[hidden]) .time{top:calc(50% - 7px)}
       this._layoutObserver?.disconnect();
       cancelAnimationFrame(this._layoutRaf);
       this._session = null;
-      this._clearPreview();
       this._phase = "idle";
       this._release();
       clearTimeout(this._receiptTimer);
@@ -1293,14 +1477,9 @@ ha-card[data-short="true"]:has(.header[hidden]) .time{top:calc(50% - 7px)}
     }
     set hass(hass) {
       this._hass = hass;
-      const lang = (hass.locale?.language || hass.language || "en").split("-")[0];
-      if (lang !== this._lang) {
-        this._lang = lang;
-        this._render();
-      }
-      const form = this.shadowRoot.querySelector("ha-form");
-      if (form) form.hass = hass;
+      this._lang = (hass.locale?.language || hass.language || "en").split("-")[0];
       if (!this._loading && !this._targets) this._load();
+      this._render();
     }
     _emit(config) {
       this._config = config;
@@ -1312,13 +1491,36 @@ ha-card[data-short="true"]:has(.header[hidden]) .time{top:calc(50% - 7px)}
         })
       );
     }
+    _change(data) {
+      const config = { ...this._config };
+      delete config.title;
+      if ("show_diagnostics" in data) {
+        if (data.show_diagnostics) config.show_diagnostics = true;
+        else delete config.show_diagnostics;
+      }
+      if ("show_speaker_selection" in data) {
+        if (data.show_speaker_selection) delete config.show_speaker_selection;
+        else config.show_speaker_selection = false;
+      }
+      if ("mode" in data) {
+        if (data.mode === "all") {
+          if (Array.isArray(config.default_targets))
+            this._lastSelection = config.default_targets;
+          delete config.default_targets;
+        } else {
+          config.default_targets = this._lastSelection || this._targets?.map((target) => target.entity_id) || [];
+        }
+      }
+      this._emit(config);
+      this._render();
+    }
     async _load() {
       this._loading = true;
       try {
-        await homeCallNativeForms();
-        const r = await this._hass.fetchWithAuth("/api/homecall/status");
-        if (!r.ok) throw Error();
-        this._targets = (await r.json()).targets;
+        await homeCallNativeSpeakerControls(this, this._hass);
+        const response = await this._hass.fetchWithAuth("/api/homecall/status");
+        if (!response.ok) throw Error();
+        this._targets = (await response.json()).targets;
         this._error = false;
       } catch {
         this._error = true;
@@ -1329,114 +1531,106 @@ ha-card[data-short="true"]:has(.header[hidden]) .time{top:calc(50% - 7px)}
     }
     _render() {
       if (!this._config) return;
-      const de = this._lang === "de", custom = Array.isArray(this._config.default_targets);
-      if (!this.shadowRoot.querySelector("ha-form")) {
-        this.shadowRoot.innerHTML = '<style>:host{display:block}ha-alert{display:block;margin-top:16px}</style><ha-form></ha-form><div class="message"></div>';
-        this.shadowRoot.querySelector("ha-form").addEventListener("value-changed", (event) => {
-          if (event.target !== this.shadowRoot.querySelector("ha-form")) return;
-          const data = event.detail.value, config = { ...this._config };
-          delete config.title;
-          if (data.show_speaker_selection) delete config.show_speaker_selection;
-          else config.show_speaker_selection = false;
-          if (data.mode === "all") {
-            if (Array.isArray(config.default_targets))
-              this._lastSelection = config.default_targets;
-            delete config.default_targets;
-          } else {
-            config.default_targets = Array.isArray(this._config.default_targets) ? data.targets || [] : this._lastSelection || this._targets?.map((t) => t.entity_id) || [];
-            this._lastSelection = config.default_targets;
-          }
-          if (data.preview_before_send) config.preview_before_send = true;
-          else delete config.preview_before_send;
-          if (data.show_diagnostics) config.show_diagnostics = true;
-          else delete config.show_diagnostics;
-          const modeChanged = Array.isArray(config.default_targets) !== Array.isArray(this._config.default_targets);
-          this._emit(config);
-          if (modeChanged) this._render();
-        });
+      const de = this._lang === "de";
+      if (!this.shadowRoot.querySelector(".appearance")) {
+        this.shadowRoot.innerHTML = `<style>:host{display:block;min-width:0}ha-expansion-panel{display:block;margin-bottom:24px}ha-icon{color:var(--secondary-text-color)}ha-alert{display:block;margin-top:16px}.speaker-list{min-width:0}</style>
+        <ha-expansion-panel outlined class="appearance"><ha-icon slot="leading-icon" icon="mdi:palette-outline"></ha-icon><span slot="header" role="heading" aria-level="3"></span><ha-form></ha-form></ha-expansion-panel>
+        <ha-expansion-panel outlined class="recipients"><ha-icon slot="leading-icon" icon="mdi:speaker-multiple"></ha-icon><span slot="header" role="heading" aria-level="3"></span><ha-form></ha-form><div class="speakers"></div><div class="message"></div></ha-expansion-panel>
+        <ha-expansion-panel outlined class="troubleshooting"><ha-icon slot="leading-icon" icon="mdi:bug-outline"></ha-icon><span slot="header" role="heading" aria-level="3"></span><ha-form></ha-form></ha-expansion-panel>`;
+        for (const form of this.shadowRoot.querySelectorAll("ha-form")) {
+          form.addEventListener("value-changed", (event) => {
+            if (event.target === form) this._change(event.detail.value);
+          });
+        }
       }
-      const form = this.shadowRoot.querySelector("ha-form");
-      form.hass = this._hass;
-      const recipientFields = [
-        {
-          name: "mode",
-          selector: {
-            select: {
-              mode: "list",
-              options: [
-                {
-                  value: "all",
-                  label: de ? "Alle freigegebenen Ger\xE4te" : "All allowed devices"
-                },
-                {
-                  value: "custom",
-                  label: de ? "Eigene Auswahl" : "Custom selection"
+      const custom = Array.isArray(this._config.default_targets);
+      const groups = {
+        appearance: {
+          title: de ? "Darstellung" : "Appearance",
+          fields: [{ name: "show_speaker_selection", selector: { boolean: {} } }],
+          data: {
+            show_speaker_selection: this._config.show_speaker_selection !== false
+          }
+        },
+        recipients: {
+          title: de ? "Standard-Empf\xE4nger" : "Default recipients",
+          fields: [
+            {
+              name: "mode",
+              selector: {
+                select: {
+                  mode: "list",
+                  options: [
+                    {
+                      value: "all",
+                      label: de ? "Alle freigegebenen Ger\xE4te" : "All allowed devices"
+                    },
+                    {
+                      value: "custom",
+                      label: de ? "Eigene Auswahl" : "Custom selection"
+                    }
+                  ]
                 }
-              ]
+              }
             }
-          }
-        }
-      ];
-      if (custom)
-        recipientFields.push({
-          name: "targets",
-          disabled: !this._targets,
-          selector: {
-            select: {
-              multiple: true,
-              mode: "list",
-              options: (this._targets || []).map((t) => ({
-                value: t.entity_id,
-                label: t.name + (t.available ? "" : " \xB7 offline")
-              }))
-            }
-          }
-        });
-      form.schema = [
-        {
-          name: "appearance",
-          type: "expandable",
-          flatten: true,
-          icon: "mdi:palette-outline",
-          schema: [
-            { name: "show_speaker_selection", selector: { boolean: {} } },
-            { name: "preview_before_send", selector: { boolean: {} } }
-          ]
+          ],
+          data: { mode: custom ? "custom" : "all" }
         },
-        {
-          name: "recipients",
-          type: "expandable",
-          flatten: true,
-          icon: "mdi:speaker-multiple",
-          schema: recipientFields
-        },
-        {
-          name: "troubleshooting",
-          type: "expandable",
-          flatten: true,
-          icon: "mdi:bug-outline",
-          schema: [{ name: "show_diagnostics", selector: { boolean: {} } }]
+        troubleshooting: {
+          title: de ? "Fehlerbehebung" : "Troubleshooting",
+          fields: [{ name: "show_diagnostics", selector: { boolean: {} } }],
+          data: { show_diagnostics: this._config.show_diagnostics === true }
         }
-      ];
-      form.data = {
-        show_speaker_selection: this._config.show_speaker_selection !== false,
-        preview_before_send: !!this._config.preview_before_send,
-        show_diagnostics: this._config.show_diagnostics === true,
-        mode: custom ? "custom" : "all",
-        targets: this._config.default_targets || []
       };
       const labels = {
-        appearance: de ? "Darstellung" : "Appearance",
-        recipients: de ? "Standard-Empf\xE4nger" : "Default recipients",
-        troubleshooting: de ? "Fehlerbehebung" : "Troubleshooting",
-        show_diagnostics: de ? "Diagnose anzeigen" : "Show diagnostics",
         show_speaker_selection: de ? "Lautsprecherauswahl anzeigen" : "Show speaker selection",
-        preview_before_send: de ? "Aufnahme vor dem Senden anh\xF6ren" : "Review recording before sending",
-        mode: "",
-        targets: ""
+        show_diagnostics: de ? "Diagnose anzeigen" : "Show diagnostics"
       };
-      form.computeLabel = (s) => labels[s.name] || "";
-      form.computeHelper = (s) => s.name === "mode" ? de ? "Diese Empf\xE4nger sind standardm\xE4\xDFig ausgew\xE4hlt." : "These recipients are selected by default." : "";
+      for (const [name, group] of Object.entries(groups)) {
+        const panel = this.shadowRoot.querySelector("." + name);
+        panel.querySelector('[slot="header"]').textContent = group.title;
+        const form = panel.querySelector("ha-form");
+        form.hass = this._hass;
+        form.schema = group.fields;
+        form.data = group.data;
+        form.computeLabel = (schema) => labels[schema.name] || "";
+      }
+      const container = this.shadowRoot.querySelector(".speakers");
+      container.hidden = !custom;
+      if (custom && this._targets) {
+        const targets = this._targets.map((target) => ({
+          ...target,
+          available: homeCallSpeakerAvailable(target, this._hass)
+        }));
+        let list = container.querySelector(".speaker-list");
+        if (!list) {
+          list = homeCallSpeakerList(
+            targets,
+            this._config.default_targets,
+            this._lang,
+            true,
+            (id, checked) => {
+              const selected = this._config.default_targets || [];
+              if (selected.includes(id) === checked) return;
+              const config = {
+                ...this._config,
+                default_targets: checked ? [.../* @__PURE__ */ new Set([...selected, id])] : selected.filter((value) => value !== id)
+              };
+              this._lastSelection = config.default_targets;
+              this._emit(config);
+              this._render();
+            }
+          );
+          container.append(list);
+        }
+        homeCallSyncSpeakerList(
+          list,
+          targets,
+          this._config.default_targets,
+          this._lang,
+          true
+        );
+      }
       const message = this.shadowRoot.querySelector(".message");
       message.replaceChildren();
       if (custom && !this._targets) {

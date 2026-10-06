@@ -1,1 +1,1 @@
-Hide the transient recording status clock
+Clear microphone readiness and speaker delivery feedback
