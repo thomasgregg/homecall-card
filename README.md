@@ -36,13 +36,19 @@ Choose the rooms. Start the microphone, wait until it is ready, then speak and t
 
 ## Screenshots
 
-Captured from a real Home Assistant installation. The waveform comes from microphone audio; the larger layouts use the card editor’s preview.
+Captured in Home Assistant using the card editor’s live preview and real microphone audio.
 
-![HomeCall Card ready, recording with a real waveform, and stopped at the recording limit](docs/assets/ui-states.png)
+![HomeCall Card ready and recording](docs/assets/ui-states.png)
 
 ![HomeCall Card in a compact dashboard row and with the expanded speaker picker open](docs/assets/ui-layouts.png)
 
-View the full-size captures: [ready](docs/assets/ui-expanded-ready.png), [recording](docs/assets/ui-expanded-recording.png), [ready to send](docs/assets/ui-expanded-limit.png), and [speaker selection](docs/assets/ui-speaker.png).
+Configure speaker selection, default recipients, and diagnostics in the visual editor.
+
+![HomeCall Card visual editor options](docs/assets/ui-editor.png)
+
+Choose the card’s width and height in the Layout tab.
+
+![HomeCall Card layout editor with a larger card preview](docs/assets/ui-editor-layout.png)
 
 ## Install
 
