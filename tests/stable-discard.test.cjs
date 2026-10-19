@@ -12,7 +12,9 @@ const context = {
       return {};
     }
   },
-  window: { isSecureContext: true },
+  window: { isSecureContext: true, AudioWorkletNode: class {} },
+  document: {},
+  performance: { now: () => 0 },
   navigator: { mediaDevices: {} },
   setTimeout(fn, delay) {
     const key = ++id;
@@ -44,7 +46,7 @@ function fixture(phase = "recording") {
     ".targets",
     ".status-popover",
     ".time",
-    ".echo-form",
+    ".speaker-list",
     ".main",
   ])
     nodes[name] = {
@@ -103,12 +105,7 @@ function fixture(phase = "recording") {
     };
     c._processor = { disconnect: () => disconnects++ };
     c._source = { disconnect: () => disconnects++ };
-    for (const key of [
-      "_startingTimer",
-      "_timer",
-      "_readyTimer",
-      "_receiptTimer",
-    ])
+    for (const key of ["_timer", "_readyTimer", "_receiptTimer"])
       c[key] = context.setTimeout(() => assert.fail("Stale timer fired"), 100);
     c._reset();
     assert.equal(c._phase, "ready");
@@ -120,7 +117,7 @@ function fixture(phase = "recording") {
     assert.equal(c._chunks.length, 0);
     assert.equal(c._samples, 0);
     assert.ok(c._levels.every((v) => v === 0));
-    assert.equal(nodes[".time"].textContent, "00:00");
+    assert.equal(nodes[".time"].textContent, "1:00");
     assert.equal(nodes[".main"].disabled, false);
     assert.equal(stops, 1);
     assert.equal(closes, 1);
@@ -129,7 +126,7 @@ function fixture(phase = "recording") {
   }
   // Retry still loads devices after a failed initial load.
   const { c: retry, nodes: retryNodes } = fixture("error");
-  retryNodes[".echo-form"] = null;
+  retryNodes[".speaker-list"] = null;
   let retries = 0;
   retry._load = () => retries++;
   retry._reset();
@@ -139,6 +136,12 @@ function fixture(phase = "recording") {
     micRequested = deferred();
   let lateStops = 0;
   context.window.AudioContext = class {
+    constructor() {
+      this.audioWorklet = { addModule: () => Promise.resolve() };
+    }
+    suspend() {
+      return Promise.resolve();
+    }
     resume() {
       return Promise.resolve();
     }
@@ -162,27 +165,39 @@ function fixture(phase = "recording") {
   await start;
   assert.ok(lateStops > 0);
   assert.equal(starting._phase, "ready");
-  // A delayed status body must not repopulate recipients after cancellation.
-  const body = deferred(),
-    bodyRequested = deferred();
+  // A worklet module can finish loading after Discard, without starting capture.
+  const module = deferred(),
+    moduleRequested = deferred();
+  context.window.AudioContext = class {
+    constructor() {
+      this.audioWorklet = {
+        addModule: () => {
+          moduleRequested.resolve();
+          return module.promise;
+        },
+      };
+    }
+    suspend() {
+      return Promise.resolve();
+    }
+    resume() {
+      return Promise.resolve();
+    }
+    close() {
+      return Promise.resolve();
+    }
+  };
   context.navigator.mediaDevices.getUserMedia = async () => ({
     getTracks: () => [{ stop() {} }],
   });
-  const { c: jsonPending } = fixture("ready");
-  jsonPending._hass.fetchWithAuth = async () => ({
-    ok: true,
-    json: () => {
-      bodyRequested.resolve();
-      return body.promise;
-    },
-  });
-  const jsonStart = jsonPending._start();
-  await bodyRequested.promise;
-  jsonPending._reset();
-  body.resolve({ targets: [] });
-  await jsonStart;
-  assert.equal(jsonPending._phase, "ready");
-  assert.equal(jsonPending.status, "Tippe auf das Mikrofon");
+  const { c: modulePending } = fixture("ready");
+  const moduleStart = modulePending._start();
+  await moduleRequested.promise;
+  modulePending._reset();
+  module.resolve();
+  await moduleStart;
+  assert.equal(modulePending._phase, "ready");
+  assert.equal(modulePending.status, "Tippe auf das Mikrofon");
   // A receipt completing after reset must not overwrite Ready.
   const receipt = deferred(),
     { c: sent } = fixture("sent");

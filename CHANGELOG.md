@@ -1,5 +1,120 @@
 # Changelog
 
+## 1.3.2
+
+- Document the optional announcement chime supplied by HomeCall integration 1.8.0 and its direct Google Cast exception. Keep integration 1.7.0 as the minimum for recording; the new chime requires 1.8.0.
+- Companion documentation and version update. Recording, recipient selection and card layout are unchanged from 1.3.1.
+
+## 1.3.1
+
+- Reduce the text speaker selector to 32px high and use that footprint in the circle's corner clearance calculation, while keeping its font, horizontal padding and the compact icon controls.
+- Balance the bottom whitespace on full-size caption cards while preserving the top and side insets and native footer touch areas. Give captions more clearance below the circle and reclaim the remaining height for a slightly larger action.
+- Balance the visible speaker icon and countdown together on one-row cards while the timer is visible, accounting for the speaker's invisible touch padding. Keep a clear gap below the icon and center the speaker on its own in other states.
+
+## 1.3.0
+
+- Show immediate microphone preparation feedback and begin recording cues only when actual input samples arrive. Prepare recorder code and a suspended audio context ahead of the tap without opening the microphone or adding fixed waits.
+- Keep action size stable across recording phases, fix window-resize geometry around the 200px boundary, and preserve footer clearance, timer and discard alignment. Use consistent captions without empty detail lines or unnecessary truncation.
+- Use Home Assistant's native speaker lists in the picker and editor, with a separate integration/availability line, mobile layouts and keyboard support. Distinguish multiple routes for the same physical speaker.
+- Keep skipped-recipient messages concise. Use the microphone to start a new recording after partial delivery; reserve Retry for failed sends.
+- Report selected recipients skipped before sending, including unavailable saved defaults and routes lost while the card is ready. Keep the warning after successful audio retrieval, independently of diagnostics.
+- Remove the optional recording review feature and its local audio player. Tapping Send finishes capture and sends the recording directly. The 60-second limit still waits for explicit Send or Discard.
+- Remove the redundant default-recipient helper text from the native editor.
+- Retain the HomeCall integration 1.7.0 minimum; this release changes only the card. Expand Chromium/WebKit coverage for readiness, resizing, recipient availability and delivery states.
+
+## 1.2.2
+
+- Hide the extra status clock while flushing a recording and uploading it. The main action already shows progress during both stages.
+- Extend the browser regression check to hold both flush and upload open, verifying that the normal flow stays free of the extra icon through success and return to ready. Error details, optional recording review and opt-in diagnostics remain available.
+
+## 1.2.1
+
+- Hide raw timing diagnostics and the extra status icon after sending or returning to ready by default.
+- Add an optional Show diagnostics switch under Troubleshooting in the native editor (`show_diagnostics: true` in YAML). Error explanations and optional local recording review remain available without enabling diagnostics.
+- Preserve first-sample readiness, complete recording flush and timing measurements. Normal recordings receive no added waits or silence.
+
+## 1.2.0
+
+- Replace ScriptProcessor recording with HomeCall's AudioWorklet recorder. Show Speak now after the first microphone samples arrive; retain the opening samples and flush the final partial buffer before sending.
+- Remove the status refresh from microphone startup, freeze the selected recipients for the recording, and enforce the 60-second limit by sample count.
+- Add optional Review recording before sending, disabled by default, with local playback and a separate Send action.
+- Add copyable capture, upload and HA timing diagnostics without recorded audio or audio bearer links. Keep diagnostic copying compatible with Safari's click-permission requirement.
+- Request 48 kHz capture to match backend limits; reject incomplete recordings on microphone disconnect, audio-context interruption or missing flush acknowledgement. Preserve cancellation and stale-session guards.
+- Require HomeCall integration 1.7.0 or newer. Update the integration first, restart HA, then update the card and refresh dashboard tabs. Normal messages receive no added padding or fixed wait; affected EchoMuse/MA setups still need hardware retesting.
+
+## 1.1.6
+
+- Update speaker compatibility guidance for Sonos, Music Assistant, Google Cast and direct EchoMuse announcements through HomeCall 1.6.0.
+- Clarify that browser recording requires HTTPS while local speaker delivery and integration sound tests can use HTTP.
+- Rebuild the versioned distribution bundle. Card runtime behavior is unchanged.
+
+## 1.1.5
+
+- Hide the redundant status clock at the recording limit so it cannot overlap the ready-to-send caption.
+- Add English and German browser regression coverage for recording-limit footer clearance.
+- Add README galleries captured from a real Home Assistant installation, including microphone waveforms, compact layouts, and speaker selection.
+
+## 1.1.4
+
+- Display the existing banner through a standard Markdown image and PNG export for HACS compatibility.
+- Preserve the original banner artwork and application behavior.
+
+## 1.1.3
+
+- Fix the README banner in HACS by using an absolute public image URL.
+- Documentation-only change; recording and integration behavior are unchanged.
+
+## 1.1.2
+
+- Show only the central checkmark after sending successfully, removing the duplicate status checkmark.
+- Preserve the existing success styling, accessible status announcement, and automatic return to the microphone.
+
+## 1.1.1
+
+- Support a 6-column × 1-row card with a 56px minimum height.
+- Center the action, discard, and speaker icons vertically in one-row cards.
+- Center countdown digits beneath the speaker, or at middle height when the picker is hidden; keep the recording dot clear of the waveform.
+- Open speaker selection outside short cards while keeping taller layouts unchanged.
+- Reuse native icons, controls, fonts, colors, and countdown behavior.
+- Document sizing in the README and add Chromium/WebKit layout regressions.
+
+## 1.1.0
+
+- Count down from 1:00 and fill the recording ring clockwise toward the 60-second limit.
+- Stop recording at the limit without sending; show a smaller outlined Send icon and retain Discard.
+- Show the limit message on larger cards and keep tiny-card footers clear.
+- Preserve Home Assistant theme colours and the soft outer-ring opacity.
+- Keep the microphone stable through quick initial loads and microphone startup; avoid transient disabled styling and startup spinners.
+
+## 1.0.5
+
+- Avoid rebuilding and fetching status twice when HA temporarily moves a mounted card.
+- Keep unchanged action icons mounted during loading and status updates.
+- Preserve resource cleanup on actual removal; add lifecycle browser regressions.
+
+## 1.0.4
+
+- Match speaker-picker, discard and status icon control boundaries and corner radii.
+- Keep narrow controls at 32px and other compact controls at 44px without changing the main action size.
+- Add browser checks for equal control width, height and radius.
+
+## 1.0.3
+
+- Restore the accepted 97px centered action on narrow dashboards with the speaker picker hidden.
+- Keep timer and delete controls inside the card with at least 8px halo clearance.
+- Verify exact sizing after picker toggles and frontend rerenders in Chromium and WebKit.
+
+Version 1.0.2 was not released: packaging validation caught an outdated bundle version header.
+
+- Use speaker-neutral labels for Alexa and DLNA recipients.
+- Recover from unavailable DLNA speakers when HA reports them online.
+
+## 1.0.1
+
+- Recover automatically from stale speaker availability when an Echo comes back online or the dashboard becomes visible again.
+- Refresh availability on Retry while preserving recipient selection and active recordings.
+- Add browser regressions for offline recovery and the exact dashboard/editor dimensions.
+
 ## 1.0.0
 
 Initial public release of HomeCall Card as an independent repository.

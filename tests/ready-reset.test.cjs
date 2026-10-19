@@ -16,6 +16,7 @@ const context = {
   window: { removeEventListener() {} },
   document: { removeEventListener() {} },
   Blob,
+  performance: { now: () => now },
   URLSearchParams,
   setTimeout(fn, delay) {
     const key = ++id;
@@ -46,6 +47,9 @@ function advance(ms) {
 function fixture(accepted) {
   const c = new context.Card();
   c._phase = "recording";
+  c.config = {};
+  c._diagnostics = { browser_timings_ms: {} };
+  c._recorderStopped = true;
   c._session = Symbol();
   c._selection = ["one", "two"];
   c._samples = 24000;
@@ -115,6 +119,13 @@ function fixture(accepted) {
   advance(5000);
   assert.equal(failure._phase, "error");
   assert.equal(failure.rendered, undefined);
+  const skipped = fixture([true, true]);
+  skipped._recordingSkippedTargets = ["offline"];
+  await skipped._finish();
+  assert.equal(skipped._partialSend, true);
+  assert.match(skipped.status, /Skipped: offline/);
+  advance(5000);
+  assert.equal(skipped._phase, "sent");
   console.log(
     "Passed: 5-second success reset, selection retained, manual reset cancels timer, stale sessions guarded, partial/failure feedback retained.",
   );

@@ -6,13 +6,41 @@ export function homeCallLayout(
   selectorWidth = 100,
   footerWidths = null,
 ) {
+  // One-row cards reserve the same side controls in every phase.
+  if (height < 120) {
+    const padding = 6;
+    const button = Math.max(
+      24,
+      Math.floor(Math.min(36, (height - 12) / 1.18, width - 112)),
+    );
+    return {
+      short: true,
+      compact: true,
+      tiny: true,
+      padding,
+      footerPadding: padding,
+      footerBottom: padding,
+      controlWidths: { discard: 32, time: 44 },
+      edgeFooter: false,
+      selectorTop: height / 2 - 16,
+      showLabel: false,
+      labelSpace: 0,
+      button,
+      centerY: height / 2,
+      visualHeight: height - 12,
+      icon: Math.round(button * 0.56),
+    };
+  }
+  const minimumButton = height <= 120 ? 24 : 52;
   const compact = width < 280 || height < 240,
     tiny = width < 200 || height < 200;
   const padding = tiny ? 8 : compact ? 12 : 20,
     selectorTop = tiny ? 6 : compact ? 8 : 10;
   // The selector occupies the upper corner, rather than a full-width header row.
+  // Text selectors are 32px high; compact cards retain their 44px header.
+  const selectorHeight = compact ? 44 : 32;
   const cornerX = Math.max(0, width / 2 - padding - selectorWidth);
-  const cornerY = Math.max(0, height / 2 - selectorTop - 45);
+  const cornerY = Math.max(0, height / 2 - selectorTop - selectorHeight - 1);
   const cornerLimit = hasSelector
     ? 2 * Math.max(26, Math.hypot(cornerX, cornerY) - 2)
     : height - 2 * padding;
@@ -24,18 +52,7 @@ export function homeCallLayout(
     borderX: 1,
     borderY: 1,
   };
-  const footerDistance = Math.min(
-    ...[
-      [footer.discard, 44],
-      [footer.time, 32],
-    ].map(([w, bottom]) =>
-      Math.hypot(
-        Math.max(0, width / 2 - padding - (footer.borderX ?? 1) - w),
-        Math.max(0, height / 2 - padding - (footer.borderY ?? 1) - bottom),
-      ),
-    ),
-  );
-  const footerLimit = (2 * Math.max(26, footerDistance - 8)) / 1.18;
+  const narrow = width < 200;
   const labelSpace =
     2 *
     Math.max(
@@ -49,16 +66,47 @@ export function homeCallLayout(
   const showLabel = width >= 200 && height >= 220 && labelSpace >= 60;
   const edgeFooter = !hasSelector && !showLabel && compact;
   const footerPadding = edgeFooter ? 8 : padding;
+  // The native 44px footer already supplies space below its text. Reclaim
+  // the extra bottom padding on full-size caption cards, keeping side insets.
+  const balancedFooter = showLabel && !compact;
+  const footerBottom = balancedFooter ? 8 : footerPadding;
+  // A two-line caption is centered in the 44px footer: its top is 38px
+  // above the footer bottom. Leave 12px clear of the halo after rounding.
+  const captionInset = balancedFooter ? (44 + 32) / 2 : 32;
+  const captionGap = balancedFooter ? 12.5 : 8;
+  const narrowClearance = narrow;
+  const discardHeight = narrowClearance ? 32 : 44;
+  const timerHeight = narrowClearance ? 24 : 32;
+  const footerDistance = Math.min(
+    ...[
+      [footer.discard, discardHeight],
+      [footer.time, timerHeight],
+    ].map(([w, bottom]) =>
+      Math.hypot(
+        Math.max(0, width / 2 - padding - (footer.borderX ?? 1) - w),
+        Math.max(0, height / 2 - footerBottom - (footer.borderY ?? 1) - bottom),
+      ),
+    ),
+  );
+  const footerLimit = Math.max(
+    minimumButton,
+    (2 * (footerDistance - 8)) / 1.18,
+  );
   const controlWidths = {
-    discard: footer.discard,
+    discard: narrowClearance ? 32 : footer.discard,
     time: footer.time - (edgeFooter ? 13 : 0),
   };
   const labelLimit = showLabel
-    ? (height / 2 - padding - (footer.borderY ?? 1) - 32 - 8) / 0.59
+    ? (height / 2 -
+        footerBottom -
+        (footer.borderY ?? 1) -
+        captionInset -
+        captionGap) /
+      0.59
     : Infinity;
   let button = Math.floor(
     Math.max(
-      52,
+      minimumButton,
       Math.min(
         240,
         width * 0.56,
@@ -76,20 +124,31 @@ export function homeCallLayout(
     const borderY = footer.borderY ?? 1,
       clearance = showLabel ? 8.5 : 8; // Keep 8px after subpixel rounding.
     const maximum = Math.floor(
-      Math.min(240, width * 0.56, (height - 2 * padding - 2 * borderY) / 1.18),
+      Math.min(
+        // Preserve the accepted 97px small-card action rather than inventing
+        // another diameter when compact footer controls free extra space.
+        narrow ? 97 : 240,
+        width * 0.56,
+        (height - 2 * padding - 2 * borderY) / 1.18,
+      ),
     );
-    for (let candidate = maximum; candidate >= 52; candidate--) {
+    for (let candidate = maximum; candidate >= minimumButton; candidate--) {
       const radius = candidate * 0.59,
         minimumY = padding + borderY + radius;
       let maximumY = height - padding - borderY - radius;
       if (showLabel)
         maximumY = Math.min(
           maximumY,
-          height - padding - borderY - 32 - clearance - radius,
+          height -
+            footerBottom -
+            borderY -
+            captionInset -
+            Math.max(8.5, captionGap) -
+            radius,
         );
       for (const [controlWidth, controlHeight] of [
-        [controlWidths.discard, 44],
-        [controlWidths.time, 32],
+        [controlWidths.discard, discardHeight],
+        [controlWidths.time, timerHeight],
       ]) {
         const distanceX = Math.max(
           0,
@@ -99,7 +158,7 @@ export function homeCallLayout(
           maximumY = Math.min(
             maximumY,
             height -
-              footerPadding -
+              footerBottom -
               borderY -
               controlHeight -
               Math.sqrt((radius + clearance) ** 2 - distanceX ** 2),
@@ -117,6 +176,18 @@ export function homeCallLayout(
       }
     }
   }
+  if (narrow && height === 120) {
+    // Use the compact controls' real footprint at narrow widths, but stop
+    // growing at the diameter supported by the regular controls at 200px.
+    // This avoids both a tiny action and a shrink when the controls expand.
+    button = Math.min(
+      button,
+      homeCallLayout(200, height, hasSelector, selectorWidth, {
+        ...footer,
+        time: footer.regularTime ?? footer.time,
+      }).button,
+    );
+  }
   const visualHeight = Math.min(
     button * 1.44,
     height - 2 * padding,
@@ -133,6 +204,7 @@ export function homeCallLayout(
     tiny,
     padding,
     footerPadding,
+    footerBottom,
     controlWidths,
     edgeFooter,
     selectorTop,
@@ -145,7 +217,29 @@ export function homeCallLayout(
   };
 }
 // The native popover stays within the visible part of its own card.
-export function homeCallRecipientBounds(card, anchor, viewport, inset = 16) {
+export function homeCallRecipientBounds(
+  card,
+  anchor,
+  viewport,
+  inset = 16,
+  outside = false,
+) {
+  if (outside) {
+    const width = Math.min(360, Math.max(320, card.width), viewport.width - 16);
+    const below = viewport.height - anchor.bottom - 12;
+    const above = anchor.top - 12;
+    const maxHeight = Math.min(240, Math.max(below, above));
+    if (maxHeight < 44) return null;
+    return {
+      left: Math.max(
+        8,
+        Math.min(anchor.right - width, viewport.width - width - 8),
+      ),
+      top: below >= above ? anchor.bottom + 4 : anchor.top - maxHeight - 4,
+      width,
+      maxHeight,
+    };
+  }
   const left = Math.max(card.left + inset, 8),
     right = Math.min(card.right - inset, viewport.width - 8);
   const top = Math.max(card.top + inset, 8),

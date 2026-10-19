@@ -33,25 +33,29 @@ for (const width of [
           x.button / 2 + 2 <=
             Math.hypot(
               Math.max(0, width / 2 - x.padding - 100),
-              Math.max(0, height / 2 - x.selectorTop - 45),
+              Math.max(
+                0,
+                height / 2 - x.selectorTop - (x.compact ? 44 : 32) - 1,
+              ),
             ),
           `${width}x${height}: selector corner clearance`,
         );
       for (const [controlWidth, bottom] of [
-        [x.controlWidths.discard, 44],
-        [x.controlWidths.time, 32],
+        [x.controlWidths.discard, width < 200 ? 32 : 44],
+        [x.controlWidths.time, width < 200 ? 24 : 32],
       ])
         assert.ok(
           x.button * 0.59 + 8 <=
             Math.hypot(
               Math.max(0, width / 2 - x.footerPadding - 1 - controlWidth),
-              Math.max(0, height - x.centerY - x.footerPadding - 1 - bottom),
+              Math.max(0, height - x.centerY - x.footerBottom - 1 - bottom),
             ),
           `${width}x${height}: outer ring clears footer hover area`,
         );
       if (x.showLabel)
         assert.ok(
-          x.centerY + x.button * 0.59 + 8 <= height - x.padding - 1 - 32,
+          x.centerY + x.button * 0.59 + (x.compact ? 8 : 12) <=
+            height - x.footerBottom - 1 - (x.compact ? 32 : 38),
           `${width}x${height}: halo clears centered footer caption`,
         );
       assert.ok(
@@ -131,14 +135,14 @@ for (const [width, height] of [
           time,
         });
         for (const [w, bottom] of [
-          [x.controlWidths.discard, 44],
-          [x.controlWidths.time, 32],
+          [x.controlWidths.discard, width < 200 ? 32 : 44],
+          [x.controlWidths.time, width < 200 ? 24 : 32],
         ])
           assert.ok(
             x.button * 0.59 + 8 <=
               Math.hypot(
                 Math.max(0, width / 2 - x.footerPadding - 1 - w),
-                Math.max(0, height - x.centerY - x.footerPadding - 1 - bottom),
+                Math.max(0, height - x.centerY - x.footerBottom - 1 - bottom),
               ),
             `${width}x${height}: measured footer clearance`,
           );
@@ -172,16 +176,28 @@ const hidden = context.homeCallLayout(500, 312, false, 0, {
   borderX: 1,
   borderY: 1,
 });
-assert.equal(visible.button, 161);
+assert.equal(visible.button, 163);
 assert.equal(
   hidden.button,
-  194,
+  196,
   "Reclaim the measured free space above the action",
 );
 assert.ok(hidden.centerY < visible.centerY);
 assert.ok(
-  hidden.centerY + hidden.button * 0.59 + 8 <= 259,
+  hidden.centerY + hidden.button * 0.59 + 12 <= 265,
   "Caption retains its gap",
+);
+assert.equal(hidden.footerPadding, 20, "Preserve horizontal footer alignment");
+assert.equal(
+  hidden.footerBottom,
+  8,
+  "Reclaim only extra vertical footer padding",
+);
+assert.ok(
+  Math.abs(
+    hidden.centerY - hidden.button * 0.59 - (hidden.footerBottom + 1 + 14),
+  ) <= 3,
+  "Single-line caption and halo have balanced top and bottom insets",
 );
 console.log("Measured-card layout:", JSON.stringify({ visible, hidden }));
 console.log(
@@ -220,3 +236,30 @@ assert.equal(
   8,
   "Compact footer must stay inset from the card edge",
 );
+
+// Two-row cards must not shrink as they cross the narrow-control breakpoint.
+for (const selector of [false, true]) {
+  let previous = 0;
+  for (let width = 150; width <= 210; width += 0.5) {
+    const x = context.homeCallLayout(width, 120, selector, 32, {
+      discard: 46,
+      time: width < 200 ? 51 : 64,
+      regularTime: 64,
+      borderX: 1,
+      borderY: 1,
+    });
+    assert.ok(
+      x.button >= previous,
+      `${width}x120: widening must not shrink the circle`,
+    );
+    assert.ok(
+      x.button - previous <= 1 || previous === 0,
+      `${width}x120: no sizing jump`,
+    );
+    assert.equal(x.padding, 8);
+    assert.equal(x.centerY, 60);
+    if (!selector && width >= 172)
+      assert.ok(x.button >= 60, `${width}x120: usable action`);
+    previous = x.button;
+  }
+}
