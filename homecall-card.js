@@ -802,7 +802,7 @@ ha-card[data-short="true"]:has(.header[hidden]) .time{top:calc(50% - 7px)}
       this._skippedTargets = [];
       this._recordingSkippedTargets = [];
       this._partialSend = false;
-      const session = Symbol();
+      const session = /* @__PURE__ */ Symbol();
       this._session = session;
       this._chunks = [];
       this._levels = Array(64).fill(0);
@@ -866,7 +866,7 @@ ha-card[data-short="true"]:has(.header[hidden]) .time{top:calc(50% - 7px)}
     }
     _reset() {
       if (!this._view) return;
-      this._session = Symbol();
+      this._session = /* @__PURE__ */ Symbol();
       clearTimeout(this._readyTimer);
       clearTimeout(this._receiptTimer);
       this._release(this._phase !== "starting");
