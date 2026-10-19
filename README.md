@@ -48,7 +48,7 @@ Configure recipients, diagnostics, and card size in the visual editor.
 
 ## Install
 
-First install and configure the [HomeCall integration](https://github.com/thomasgregg/homecall) **1.7.0 or newer**. HomeCall Card 1.3.2 uses the recorder module supplied by that integration. If your integration is older, update it first and restart Home Assistant. If you already have 1.7.0 or newer, this card update needs only a dashboard refresh. Use Home Assistant 2026.9 or newer and open the dashboard through HTTPS.
+First install and configure the [HomeCall integration](https://github.com/thomasgregg/homecall) **1.7.0 or newer**. HomeCall Card 1.3.3 uses the recorder module supplied by that integration. If your integration is older, update it first and restart Home Assistant. If you already have 1.7.0 or newer, this card update needs only a dashboard refresh. Use Home Assistant 2026.9 or newer and open the dashboard through HTTPS.
 
 **HTTPS is required for microphone recording.** Browsers only allow microphone access from a secure page, so a dashboard opened at an ordinary HTTP address such as `http://192.168.1.10:8123` cannot record voice messages, even if you allow microphone permission. Open Home Assistant using a trusted HTTPS address, either on your local network or through an existing remote-access connection. You do not need to expose Home Assistant publicly. See the [browser microphone requirements](https://developer.mozilla.org/en-US/docs/Web/API/MediaDevices/getUserMedia#privacy_and_security).
 
@@ -154,4 +154,4 @@ Licensed under [MIT](LICENSE). Built and maintained by [Thomas Gregg](https://gi
 
 HomeCall integration 1.8.0 adds **Play a chime before messages** under **HomeCall → Configure → Announcements**, disabled by default. The card still sends one recording; the integration combines the chime and message for applicable recipients. **Skip the chime on direct Google Cast speakers** is enabled by default; turn it off to include the HomeCall chime on those speakers. Music Assistant players and groups are not excluded by that setting. Native Cast connection sounds can still occur. The new chime needs hardware testing on individual routes and groups.
 
-Card 1.3.2 is a companion documentation/version update; recording and delivery behavior are unchanged from 1.3.1.
+Card 1.3.3 updates the build tooling; recording and delivery behavior are unchanged from 1.3.1.

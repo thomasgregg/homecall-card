@@ -1,5 +1,10 @@
 # Changelog
 
+## 1.3.3
+
+- Update the esbuild build dependency from 0.25.12 to 0.28.2 and regenerate the distributed card.
+- Maintenance release; no intentional changes to recording, recipient selection, or card layout.
+
 ## 1.3.2
 
 - Document the optional announcement chime supplied by HomeCall integration 1.8.0 and its direct Google Cast exception. Keep integration 1.7.0 as the minimum for recording; the new chime requires 1.8.0.
