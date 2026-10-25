@@ -1,3 +1,5 @@
+> **HomeCall Card has moved into HomeCall.** From [HomeCall 1.9.0](https://github.com/thomasgregg/homecall/releases/tag/v1.9.0), the integration includes and updates the dashboard card. Install only [HomeCall](https://github.com/thomasgregg/homecall). Existing users should follow the [migration guide](https://github.com/thomasgregg/homecall/blob/main/docs/card-migration.md) to remove the separate HACS card and old resource URLs. Existing `custom:homecall-card` configurations remain valid. This repository is retained for history and rollback; new development lives in [homecall/card](https://github.com/thomasgregg/homecall/tree/main/card).
+
 ![HomeCall Card — Your voice. Every room.](https://raw.githubusercontent.com/thomasgregg/homecall-card/main/docs/assets/hero-compact.png)
 
 <p align="center">
@@ -54,25 +56,11 @@ First install and configure the [HomeCall integration](https://github.com/thomas
 
 This requirement applies to the dashboard used to record. Music Assistant and speaker audio delivery can still use local HTTP. You can also configure speakers and play the built-in test chime from the integration's HomeCall settings over HTTP.
 
-### HACS
+### Install or migrate through HomeCall
 
-[![Open in HACS](https://my.home-assistant.io/badges/hacs_repository.svg)](https://my.home-assistant.io/redirect/hacs_repository/?owner=thomasgregg&repository=homecall-card&category=plugin)
+Use the [HomeCall installation instructions](https://github.com/thomasgregg/homecall#install). HomeCall 1.9.0 and newer includes the card and registers its dashboard resource automatically for UI-managed resources.
 
-With HACS installed, click the button to open this custom repository in your Home Assistant instance. Add it when prompted, then choose **Download**. Install the integration and card separately.
-
-1. Add `https://github.com/thomasgregg/homecall-card` to HACS **Custom repositories** as a **Dashboard** repository.
-2. Download HomeCall Card.
-3. Confirm HACS registered the JavaScript resource, refresh the dashboard, and add **HomeCall** from the card picker.
-
-### Manual
-
-Copy [`homecall-card.js`](homecall-card.js) to `<config>/www/homecall-card.js`. Register a JavaScript **module** resource at `/local/homecall-card.js` under **Settings → Dashboards → Resources**, then refresh the dashboard.
-
-```yaml
-type: custom:homecall-card
-```
-
-The root JavaScript file is a self-contained build. You do not need npm or a build step on Home Assistant.
+If this separate card is already installed, follow the [migration guide](https://github.com/thomasgregg/homecall/blob/main/docs/card-migration.md). Existing `custom:homecall-card` configurations stay valid. Remove the separate HACS card and obsolete resource URLs after updating the integration.
 
 ## Everyday use
 
