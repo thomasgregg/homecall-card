@@ -1,5 +1,7 @@
 # HomeCall Card has moved
 
+![HomeCall Card — Your voice. Every room.](docs/assets/hero-compact.png)
+
 HomeCall Card is included in the [HomeCall integration](https://github.com/thomasgregg/homecall) from **HomeCall 1.9.0**. Install and update only HomeCall; it supplies matching backend and dashboard card versions.
 
 - [Current card guide, screenshots and configuration](https://github.com/thomasgregg/homecall#dashboard-card)
